@@ -1916,12 +1916,32 @@ async function loadNotifications() {
       return;
     }
 
-    list.innerHTML = notifications.slice(0, 20).map(n => `
-      <div class="notif-item ${n.read ? '' : 'unread'}">
-        <div class="notif-item__message">${esc(n.message)}</div>
+    // Resolve post titles for notifications that reference posts
+    const postIds = [...new Set(
+      notifications.map(n => n.metadata?.post_id).filter(Boolean)
+    )];
+    const postTitles = {};
+    await Promise.all(postIds.map(async id => {
+      try {
+        const post = await apiFetch(`/api/posts/${id}`);
+        postTitles[id] = post.title;
+      } catch(e) { /* post may be deleted */ }
+    }));
+
+    list.innerHTML = notifications.slice(0, 20).map(n => {
+      const postId = n.metadata?.post_id;
+      const title = postId ? postTitles[postId] : null;
+      let message = n.message;
+      if (title && message === 'New comment on post') {
+        message = `New comment on "${title}"`;
+      }
+      const onclick = postId ? ` onclick="navigate('post','${esc(postId)}')"` : '';
+      return `
+      <div class="notif-item ${n.read ? '' : 'unread'}"${onclick}>
+        <div class="notif-item__message">${esc(message)}</div>
         <div class="notif-item__time">${timeAgo(n.created_at)}</div>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
   } catch(err) {
     // Silently fail for notifications
   }
@@ -2126,19 +2146,21 @@ function renderMarkdown(text) {
   // Horizontal rule
   html = html.replace(/^---$/gm, '<hr>');
 
-  // Images — protocol whitelist prevents javascript: URIs.
-  // Content is already escaped so attribute breakout is impossible.
+  // Images — protocol whitelist + quote stripping prevents javascript: URIs
+  // and attribute breakout.
   html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, src) => {
-    if (/^https?:\/\//.test(src) || src.startsWith('/')) {
-      return `<img src="${src}" alt="${alt}">`;
+    const safeSrc = src.replace(/["']/g, '');
+    if (/^https?:\/\//.test(safeSrc) || safeSrc.startsWith('/')) {
+      return `<img src="${safeSrc}" alt="${alt.replace(/["']/g, '')}">`;
     }
     return '';
   });
 
-  // Links — protocol whitelist prevents javascript: URIs
+  // Links — protocol whitelist + quote stripping
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => {
-    if (/^https?:\/\//.test(url) || url.startsWith('/') || url.startsWith('#') || url.startsWith('mailto:')) {
-      return `<a href="${url}" target="_blank" rel="noopener">${label}</a>`;
+    const safeUrl = url.replace(/["']/g, '');
+    if (/^https?:\/\//.test(safeUrl) || safeUrl.startsWith('/') || safeUrl.startsWith('#') || safeUrl.startsWith('mailto:')) {
+      return `<a href="${safeUrl}" target="_blank" rel="noopener">${label}</a>`;
     }
     return label;
   });
@@ -2192,7 +2214,7 @@ function esc(str) {
   if (!str) return '';
   const d = document.createElement('div');
   d.textContent = str;
-  return d.innerHTML;
+  return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function timeAgo(dateStr) {
@@ -2505,13 +2527,13 @@ function runSecurityTests() {
   // 1. Script tag injection
   assert(
     '<script> tag in text',
-    renderMarkdown('Hello <script>alert("XSS")</script> world'),
+    renderMarkdown('Hello <script>alert("XSS")<\/script> world'),
   );
 
   // 2. Script tag in heading
   assert(
     '<script> in heading',
-    renderMarkdown('# <script>alert(1)</script>'),
+    renderMarkdown('# <script>alert(1)<\/script>'),
   );
 
   // 3. Image onerror event handler
@@ -2547,14 +2569,14 @@ function runSecurityTests() {
   // 8. Nested script in inline code context
   assert(
     'script in inline code',
-    renderMarkdown('`<script>alert(1)</script>`'),
+    renderMarkdown('`<script>alert(1)<\/script>`'),
     /(?<!&lt;)script(?!&gt;)/ // should be entity-escaped
   );
 
   // 9. Data URI in image
   assert(
     'data: URI in image',
-    renderMarkdown('![x](data:text/html,<script>alert(1)</script>)'),
+    renderMarkdown('![x](data:text/html,<script>alert(1)<\/script>)'),
   );
 
   // 10. Attribute breakout in link
@@ -2590,7 +2612,7 @@ function runSecurityTests() {
   // 15. Null byte injection
   assert(
     'null byte in script tag',
-    renderMarkdown('Hello <scr\x00ipt>alert(1)</script> world'),
+    renderMarkdown('Hello <scr\x00ipt>alert(1)<\/script> world'),
   );
 
   // Print results
