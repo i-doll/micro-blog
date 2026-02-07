@@ -1,11 +1,12 @@
 use axum::{
     body::Body,
-    extract::{Multipart, Path, State},
+    extract::{Multipart, Path, Query, State},
     http::{header, HeaderMap, StatusCode},
     Json,
 };
 use serde_json::{json, Value};
 use sqlx::PgPool;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::storage::Storage;
@@ -192,7 +193,12 @@ pub async fn delete(
         (StatusCode::NOT_FOUND, Json(json!({"error": "Media not found"})))
     })?;
 
-    if owner_id.to_string() != user_id {
+    let is_admin = headers
+        .get("x-user-role")
+        .and_then(|v| v.to_str().ok())
+        == Some("admin");
+
+    if owner_id.to_string() != user_id && !is_admin {
         return Err((StatusCode::FORBIDDEN, Json(json!({"error": "Not the owner"}))));
     }
 
@@ -224,6 +230,7 @@ pub async fn delete(
 pub async fn list_by_user(
     State(state): State<AppState>,
     headers: HeaderMap,
+    Query(params): Query<HashMap<String, String>>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     let user_id = headers
         .get("x-user-id")
@@ -234,32 +241,67 @@ pub async fn list_by_user(
         (StatusCode::BAD_REQUEST, Json(json!({"error": "Invalid user ID"})))
     })?;
 
-    let rows = sqlx::query_as::<_, (Uuid, String, String, String, i64, chrono::DateTime<chrono::Utc>)>(
-        "SELECT id, filename, original_name, content_type, size, created_at FROM media WHERE user_id = $1 ORDER BY created_at DESC",
-    )
-    .bind(user_uuid)
-    .fetch_all(&state.pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("DB error: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"})))
-    })?;
+    let is_admin = headers
+        .get("x-user-role")
+        .and_then(|v| v.to_str().ok())
+        == Some("admin");
+    let list_all = is_admin && params.get("all").map(|v| v == "true").unwrap_or(false);
 
-    let media: Vec<Value> = rows
-        .into_iter()
-        .map(|(id, filename, original_name, content_type, size, created_at)| {
-            json!({
-                "id": id,
-                "filename": filename,
-                "original_name": original_name,
-                "content_type": content_type,
-                "size": size,
-                "created_at": created_at,
+    if list_all {
+        let rows = sqlx::query_as::<_, (Uuid, Uuid, String, String, String, i64, chrono::DateTime<chrono::Utc>)>(
+            "SELECT id, user_id, filename, original_name, content_type, size, created_at FROM media ORDER BY created_at DESC",
+        )
+        .fetch_all(&state.pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("DB error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"})))
+        })?;
+
+        let media: Vec<Value> = rows
+            .into_iter()
+            .map(|(id, user_id, filename, original_name, content_type, size, created_at)| {
+                json!({
+                    "id": id,
+                    "user_id": user_id,
+                    "filename": filename,
+                    "original_name": original_name,
+                    "content_type": content_type,
+                    "size": size,
+                    "created_at": created_at,
+                })
             })
-        })
-        .collect();
+            .collect();
 
-    Ok(Json(json!({ "media": media })))
+        Ok(Json(json!({ "media": media })))
+    } else {
+        let rows = sqlx::query_as::<_, (Uuid, String, String, String, i64, chrono::DateTime<chrono::Utc>)>(
+            "SELECT id, filename, original_name, content_type, size, created_at FROM media WHERE user_id = $1 ORDER BY created_at DESC",
+        )
+        .bind(user_uuid)
+        .fetch_all(&state.pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("DB error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"})))
+        })?;
+
+        let media: Vec<Value> = rows
+            .into_iter()
+            .map(|(id, filename, original_name, content_type, size, created_at)| {
+                json!({
+                    "id": id,
+                    "filename": filename,
+                    "original_name": original_name,
+                    "content_type": content_type,
+                    "size": size,
+                    "created_at": created_at,
+                })
+            })
+            .collect();
+
+        Ok(Json(json!({ "media": media })))
+    }
 }
 
 // ===== Input sanitization and safe header construction =====

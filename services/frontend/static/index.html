@@ -415,10 +415,22 @@ textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
   border-radius: 2px;
 }
 
+/* Post card thumbnail */
+.post-card__thumb {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  margin-bottom: 0.75rem;
+}
+
 /* Featured post (first) */
 .post-card--featured {
   padding: 2rem 0;
   border-bottom: 2px solid var(--rule-color);
+}
+.post-card--featured .post-card__thumb {
+  max-height: 300px;
 }
 .post-card--featured .post-card__title {
   font-size: clamp(1.75rem, 4vw, 2.75rem);
@@ -689,6 +701,143 @@ textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
 }
 .compose-content-input:focus { box-shadow: none; }
 .compose-content-input::placeholder { color: var(--text-muted); }
+.compose-content-input.drag-over {
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+.compose-media-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+}
+.compose-media-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--rule-light);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.compose-media-btn:hover { color: var(--accent); border-color: var(--accent); }
+.compose-media-btn.uploading {
+  pointer-events: none;
+  opacity: 0.5;
+}
+.compose-media-btn.uploading svg { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.compose-media-hint {
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* Media library panel */
+.compose-media-panel {
+  display: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  background: var(--bg-secondary);
+  max-height: 300px;
+  overflow-y: auto;
+}
+.compose-media-panel.open { display: block; }
+.compose-media-panel__header {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.5rem;
+}
+.media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 0.5rem;
+}
+.media-grid__item {
+  position: relative;
+  aspect-ratio: 1;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.media-grid__item:hover { border-color: var(--accent); }
+.media-grid__item.is-session { border-color: var(--accent); }
+.media-grid__item.is-referenced { box-shadow: inset 0 0 0 2px var(--success); }
+.media-grid__item img, .media-grid__item video { width: 100%; height: 100%; object-fit: cover; }
+.media-grid__delete {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--error);
+  color: white;
+  font-size: 10px;
+  line-height: 18px;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+  font-family: var(--font-sans);
+}
+.media-grid__item:hover .media-grid__delete { opacity: 1; }
+.media-grid__video-badge {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  background: rgba(0,0,0,0.7);
+  color: white;
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-family: var(--font-sans);
+}
+.media-grid__empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding: 1rem;
+}
+.compose-library-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--rule-light);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.compose-library-btn:hover { color: var(--accent); border-color: var(--accent); }
+.compose-library-btn.active { color: var(--accent); border-color: var(--accent); background: var(--accent-muted); }
+
+.post-body video {
+  max-width: 100%;
+  border-radius: var(--radius-md);
+  margin: 1rem 0;
+}
 
 .compose-tags-input {
   font-family: var(--font-sans);
@@ -1246,6 +1395,34 @@ textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
   letter-spacing: 0.03em;
 }
 
+/* Admin media tab */
+.admin-media-preview {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+}
+.admin-media-orphan > td { background: color-mix(in srgb, var(--error) 8%, transparent); }
+.admin-table .col-preview { width: 50px; }
+.admin-table .col-filename { width: 20%; }
+.admin-table .col-owner { width: 12%; }
+.admin-table .col-type { width: 10%; }
+.admin-table .col-size { width: 8%; }
+.admin-table .col-uploaded { width: 12%; }
+.admin-table .col-refs { width: 20%; }
+.admin-table .col-media-actions { width: 8%; }
+.admin-media-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+}
+.admin-media-toolbar label { display: flex; align-items: center; gap: 0.375rem; cursor: pointer; color: var(--text-secondary); }
+.admin-media-toolbar input[type="checkbox"] { width: auto; accent-color: var(--accent); }
+
 @media (max-width: 768px) {
   .admin-table { min-width: 580px; }
   .admin-tab { padding: 0.6rem 0.75rem; font-size: 0.6875rem; }
@@ -1421,6 +1598,19 @@ textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
       <hr class="section-rule">
       <input type="text" class="compose-title-input" id="compose-title" placeholder="Title">
       <textarea class="compose-content-input" id="compose-content" placeholder="Write your story... (Markdown supported)"></textarea>
+      <div class="compose-media-bar">
+        <button type="button" class="compose-media-btn" onclick="triggerMediaUpload('compose-content')" title="Upload image or video">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+        </button>
+        <button type="button" class="compose-library-btn" onclick="toggleMediaPanel('compose')" title="Media library">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        </button>
+        <span class="compose-media-hint">Drop files to upload</span>
+      </div>
+      <div class="compose-media-panel" id="compose-media-panel">
+        <div class="compose-media-panel__header">Media Library</div>
+        <div class="media-grid" id="compose-media-grid"></div>
+      </div>
       <div class="compose-toolbar">
         <div>
           <div class="form-group" style="margin-bottom:0">
@@ -1447,6 +1637,19 @@ textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
       <hr class="section-rule">
       <input type="text" class="compose-title-input" id="edit-title" placeholder="Title">
       <textarea class="compose-content-input" id="edit-content" placeholder="Write your story..."></textarea>
+      <div class="compose-media-bar">
+        <button type="button" class="compose-media-btn" onclick="triggerMediaUpload('edit-content')" title="Upload image or video">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+        </button>
+        <button type="button" class="compose-library-btn" onclick="toggleMediaPanel('edit')" title="Media library">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        </button>
+        <span class="compose-media-hint">Drop files to upload</span>
+      </div>
+      <div class="compose-media-panel" id="edit-media-panel">
+        <div class="compose-media-panel__header">Media Library</div>
+        <div class="media-grid" id="edit-media-grid"></div>
+      </div>
       <div class="compose-toolbar">
         <div>
           <div class="form-group" style="margin-bottom:0">
@@ -1486,6 +1689,7 @@ textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
         <div class="admin-tab" data-tab="users" onclick="switchAdminTab('users')">Users</div>
         <div class="admin-tab" data-tab="posts" onclick="switchAdminTab('posts')">Posts</div>
         <div class="admin-tab" data-tab="comments" onclick="switchAdminTab('comments')">Comments</div>
+        <div class="admin-tab" data-tab="media" onclick="switchAdminTab('media')">Media</div>
       </div>
       <div id="admin-users" class="admin-panel-tab">
         <div id="admin-users-table"></div>
@@ -1498,6 +1702,14 @@ textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
       <div id="admin-comments" class="admin-panel-tab">
         <div id="admin-comments-table"></div>
         <div id="admin-comments-pagination" class="pagination"></div>
+      </div>
+      <div id="admin-media" class="admin-panel-tab">
+        <div class="admin-media-toolbar">
+          <label><input type="checkbox" id="admin-media-orphans-only" onchange="renderAdminMediaTable()"> Show orphans only</label>
+          <button class="btn btn--danger btn--sm" onclick="deleteAllOrphans()">Delete All Orphans</button>
+        </div>
+        <div id="admin-media-table"></div>
+        <div id="admin-media-pagination" class="pagination"></div>
       </div>
     </div>
   </div>
@@ -1540,6 +1752,8 @@ textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
   </div>
 </div>
 
+<input type="file" id="media-file-input" accept="image/*,video/*" style="display:none">
+
 <script>
 // ===== CONFIG =====
 const API = window.location.origin;
@@ -1554,6 +1768,7 @@ let state = {
   replyTo: null,
   postsPage: 1,
   postsLimit: 20,
+  sessionMedia: [],
 };
 
 let captchaState = { register: null };
@@ -1643,10 +1858,14 @@ function navigate(view, param, noHash) {
       document.getElementById('compose-content').value = '';
       document.getElementById('compose-tags').value = '';
       document.getElementById('compose-status').value = 'published';
+      state.sessionMedia = [];
+      document.getElementById('compose-media-panel').classList.remove('open');
       break;
     case 'edit':
       if (!state.token) { navigate('login'); return; }
       if (state.user.role !== 'writer' && state.user.role !== 'admin') { navigate('home'); return; }
+      state.sessionMedia = [];
+      document.getElementById('edit-media-panel').classList.remove('open');
       loadPostForEdit(param);
       break;
     case 'profile':
@@ -1733,6 +1952,165 @@ async function apiUpload(path, formData) {
   if (!resp.ok) throw { status: resp.status, message: data?.error || 'Upload failed' };
   return data;
 }
+
+// ===== MEDIA UPLOAD =====
+let activeTextareaId = null;
+
+function triggerMediaUpload(textareaId) {
+  activeTextareaId = textareaId;
+  const input = document.getElementById('media-file-input');
+  input.value = '';
+  input.click();
+}
+
+document.getElementById('media-file-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file && activeTextareaId) handleMediaUpload(file, activeTextareaId);
+});
+
+async function handleMediaUpload(file, textareaId) {
+  if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+    toast('Only image and video files are supported', 'error');
+    return;
+  }
+
+  const btn = document.querySelector(`#view-compose .compose-media-btn, #view-edit .compose-media-btn`);
+  const btns = document.querySelectorAll('.compose-media-btn');
+  btns.forEach(b => b.classList.add('uploading'));
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const resp = await apiUpload('/api/media', formData);
+    const isVideo = resp.content_type && resp.content_type.startsWith('video/');
+    const name = file.name.replace(/\[|\]/g, '');
+    const altText = isVideo ? `video:${name}` : name;
+    const markdown = `![${altText}](/api/media/${resp.id})`;
+    insertAtCursor(textareaId, markdown);
+    state.sessionMedia.push(resp.id);
+    const mode = textareaId === 'compose-content' ? 'compose' : 'edit';
+    const panel = document.getElementById(mode + '-media-panel');
+    if (panel && panel.classList.contains('open')) loadMediaPanel(mode);
+    toast('Media uploaded', 'success');
+  } catch (err) {
+    toast(err.message || 'Upload failed', 'error');
+  } finally {
+    btns.forEach(b => b.classList.remove('uploading'));
+  }
+}
+
+function insertAtCursor(textareaId, text) {
+  const ta = document.getElementById(textareaId);
+  if (!ta) return;
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const before = ta.value.substring(0, start);
+  const after = ta.value.substring(end);
+  const needNewlineBefore = before.length > 0 && !before.endsWith('\n') ? '\n' : '';
+  const needNewlineAfter = after.length > 0 && !after.startsWith('\n') ? '\n' : '';
+  const insert = needNewlineBefore + text + needNewlineAfter;
+  ta.value = before + insert + after;
+  const cursorPos = start + insert.length;
+  ta.selectionStart = ta.selectionEnd = cursorPos;
+  ta.focus();
+  ta.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+// ===== MEDIA LIBRARY PANEL =====
+function toggleMediaPanel(mode) {
+  const panel = document.getElementById(mode + '-media-panel');
+  const btn = document.querySelector(`#view-${mode} .compose-library-btn`);
+  if (!panel) return;
+  panel.classList.toggle('open');
+  if (btn) btn.classList.toggle('active', panel.classList.contains('open'));
+  if (panel.classList.contains('open')) loadMediaPanel(mode);
+}
+
+async function loadMediaPanel(mode) {
+  const grid = document.getElementById(mode + '-media-grid');
+  if (!grid) return;
+  grid.innerHTML = '<div class="media-grid__empty">Loading...</div>';
+
+  try {
+    const data = await apiFetch('/api/media');
+    const items = data.media || [];
+    if (items.length === 0) {
+      grid.innerHTML = '<div class="media-grid__empty">No media yet. Upload files above.</div>';
+      return;
+    }
+
+    const textareaId = mode === 'compose' ? 'compose-content' : 'edit-content';
+    const content = document.getElementById(textareaId)?.value || '';
+    const referencedIds = new Set();
+    const refRegex = /\/api\/media\/([a-f0-9-]+)/g;
+    let rm;
+    while ((rm = refRegex.exec(content)) !== null) referencedIds.add(rm[1]);
+
+    grid.innerHTML = items.map(item => {
+      const isVideo = item.content_type && item.content_type.startsWith('video/');
+      const isSession = state.sessionMedia.includes(item.id);
+      const isRef = referencedIds.has(item.id);
+      const classes = ['media-grid__item', isSession ? 'is-session' : '', isRef ? 'is-referenced' : ''].filter(Boolean).join(' ');
+
+      return `<div class="${classes}" title="${esc(item.original_name)}">
+        ${isVideo
+          ? `<video src="/api/media/${item.id}" muted></video><span class="media-grid__video-badge">VIDEO</span>`
+          : `<img src="/api/media/${item.id}" alt="${esc(item.original_name)}" loading="lazy">`}
+        <button class="media-grid__delete" onclick="event.stopPropagation();deleteMediaItem('${item.id}','${mode}')" title="Delete">&times;</button>
+        <div style="position:absolute;inset:0;cursor:pointer" onclick="insertMediaAtCursor('${mode}','${item.id}','${esc(item.original_name.replace(/'/g, ''))}',${isVideo})"></div>
+      </div>`;
+    }).join('');
+  } catch (err) {
+    grid.innerHTML = '<div class="media-grid__empty">Failed to load media.</div>';
+  }
+}
+
+function insertMediaAtCursor(mode, mediaId, name, isVideo) {
+  const textareaId = mode === 'compose' ? 'compose-content' : 'edit-content';
+  const altText = isVideo ? `video:${name}` : name;
+  const markdown = `![${altText}](/api/media/${mediaId})`;
+  insertAtCursor(textareaId, markdown);
+  loadMediaPanel(mode);
+}
+
+async function deleteMediaItem(mediaId, mode) {
+  if (!confirm('Delete this media file?')) return;
+  try {
+    await apiFetch(`/api/media/${mediaId}`, { method: 'DELETE' });
+    toast('Media deleted', 'info');
+    loadMediaPanel(mode);
+  } catch (err) {
+    toast(err.message || 'Delete failed', 'error');
+  }
+}
+
+// Drag-and-drop and paste for compose/edit textareas
+['compose-content', 'edit-content'].forEach(id => {
+  const ta = document.getElementById(id);
+  if (!ta) return;
+
+  ta.addEventListener('dragover', (e) => { e.preventDefault(); ta.classList.add('drag-over'); });
+  ta.addEventListener('dragenter', (e) => { e.preventDefault(); ta.classList.add('drag-over'); });
+  ta.addEventListener('dragleave', () => { ta.classList.remove('drag-over'); });
+  ta.addEventListener('drop', (e) => {
+    e.preventDefault();
+    ta.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) handleMediaUpload(file, id);
+  });
+
+  ta.addEventListener('paste', (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.kind === 'file' && (item.type.startsWith('image/') || item.type.startsWith('video/'))) {
+        e.preventDefault();
+        handleMediaUpload(item.getAsFile(), id);
+        return;
+      }
+    }
+  });
+});
 
 // ===== AUTH =====
 async function handleLogin(e) {
@@ -1844,7 +2222,6 @@ async function loadPosts(page) {
 
     container.innerHTML = posts.map((post, i) => {
       const date = new Date(post.published_at || post.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-      const excerpt = stripMarkdown(post.content || '').slice(0, 250);
       const tags = (post.tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join('');
       const featured = i === 0 && state.postsPage === 1 ? ' post-card--featured' : '';
 
@@ -1857,7 +2234,7 @@ async function loadPosts(page) {
             ${post.status === 'draft' ? '<span class="tag" style="background:var(--warning);color:#000">Draft</span>' : ''}
           </div>
           <h2 class="post-card__title">${esc(post.title)}</h2>
-          <p class="post-card__excerpt">${esc(excerpt)}</p>
+          <div class="post-card__excerpt">${renderExcerpt(post.content || '')}</div>
           ${tags ? `<div class="post-card__tags">${tags}</div>` : ''}
         </div>`;
     }).join('');
@@ -2338,8 +2715,8 @@ async function loadHealth() {
 // ===== MARKDOWN RENDERING =====
 // DOMPurify config: only allow tags/attrs that our markdown renderer produces
 const PURIFY_CONFIG = {
-  ALLOWED_TAGS: ['h1','h2','h3','p','a','strong','em','code','pre','blockquote','ul','ol','li','hr','img','br'],
-  ALLOWED_ATTR: ['href','target','rel','src','alt'],
+  ALLOWED_TAGS: ['h1','h2','h3','p','a','strong','em','code','pre','blockquote','ul','ol','li','hr','img','br','video'],
+  ALLOWED_ATTR: ['href','target','rel','src','alt','controls','preload'],
   ALLOW_DATA_ATTR: false,
 };
 
@@ -2389,6 +2766,9 @@ function renderMarkdown(text) {
   html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, src) => {
     const safeSrc = src.replace(/["']/g, '');
     if (/^https?:\/\//.test(safeSrc) || safeSrc.startsWith('/')) {
+      if (alt.startsWith('video:')) {
+        return `<video src="${safeSrc}" controls preload="metadata"></video>`;
+      }
       return `<img src="${safeSrc}" alt="${alt.replace(/["']/g, '')}">`;
     }
     return '';
@@ -2466,6 +2846,32 @@ function stripMarkdown(text) {
     .trim();
 }
 
+function extractFirstImage(content) {
+  const m = content.match(/!\[[^\]]*\]\((\/api\/media\/[a-f0-9-]+)\)/);
+  return m ? m[1] : null;
+}
+
+function renderExcerpt(content) {
+  const parts = content.split(/(!\[[^\]]*\]\(\/api\/media\/[a-f0-9-]+\))/);
+  let result = '';
+  let textLen = 0;
+  const maxText = 250;
+  for (const part of parts) {
+    const imgMatch = part.match(/!\[[^\]]*\]\((\/api\/media\/[a-f0-9-]+)\)/);
+    if (imgMatch) {
+      result += `<img class="post-card__thumb" src="${imgMatch[1]}" alt="" loading="lazy">`;
+    } else {
+      const remaining = maxText - textLen;
+      if (remaining <= 0) continue;
+      const stripped = stripMarkdown(part);
+      const text = stripped.slice(0, remaining);
+      result += esc(text);
+      textLen += text.length;
+    }
+  }
+  return result;
+}
+
 // ===== UTILITIES =====
 function esc(str) {
   if (!str) return '';
@@ -2502,16 +2908,16 @@ function toast(message, type = 'info') {
 
 // ===== ADMIN PANEL =====
 function switchAdminTab(tab) {
-  const tabMap = { users: 'admin-users', posts: 'admin-posts', comments: 'admin-comments' };
+  const tabMap = { users: 'admin-users', posts: 'admin-posts', comments: 'admin-comments', media: 'admin-media' };
   const isWriter = state.user && state.user.role === 'writer';
 
   document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.admin-panel-tab').forEach(t => t.classList.remove('active'));
 
-  // Hide Users/Posts tabs for writers
+  // Hide Users/Posts/Media tabs for writers
   document.querySelectorAll('.admin-tab').forEach(t => {
     const tabName = t.getAttribute('data-tab');
-    if (isWriter && (tabName === 'users' || tabName === 'posts')) {
+    if (isWriter && (tabName === 'users' || tabName === 'posts' || tabName === 'media')) {
       t.style.display = 'none';
     } else {
       t.style.display = '';
@@ -2526,6 +2932,7 @@ function switchAdminTab(tab) {
   if (tab === 'users') loadAdminUsers();
   else if (tab === 'posts') loadAdminPosts();
   else if (tab === 'comments') loadAdminComments();
+  else if (tab === 'media') loadAdminMedia();
 }
 
 async function loadAdminUsers(page = 1) {
@@ -2913,6 +3320,191 @@ async function adminDeleteComment(commentId) {
   } catch(err) {
     toast(err.message, 'error');
   }
+}
+
+// ===== ADMIN MEDIA TAB =====
+let adminMediaData = [];
+let adminMediaPostMap = {};
+let adminMediaReferencedIds = new Set();
+let adminMediaPage = 1;
+
+async function loadAdminMedia() {
+  const container = document.getElementById('admin-media-table');
+  container.innerHTML = '<div class="skeleton skeleton--text"></div>';
+  document.getElementById('admin-media-pagination').innerHTML = '';
+
+  try {
+    const [mediaData, allPosts] = await Promise.all([
+      apiFetch('/api/media?all=true'),
+      fetchAllPosts(),
+    ]);
+
+    adminMediaData = mediaData.media || [];
+    const ownerIds = [...new Set(adminMediaData.map(m => m.user_id).filter(Boolean))];
+    await resolveUsernames(ownerIds);
+
+    // Build reference map: mediaId -> [{postId, title}]
+    adminMediaPostMap = {};
+    adminMediaReferencedIds = new Set();
+    for (const post of allPosts) {
+      const ids = extractAllMediaIds(post.content || '');
+      for (const mid of ids) {
+        adminMediaReferencedIds.add(mid);
+        if (!adminMediaPostMap[mid]) adminMediaPostMap[mid] = [];
+        adminMediaPostMap[mid].push({ postId: post.id, title: post.title });
+      }
+    }
+
+    adminMediaPage = 1;
+    renderAdminMediaTable();
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state__text">Failed to load media. ${esc(err.message)}</div></div>`;
+  }
+}
+
+function renderAdminMediaTable() {
+  const container = document.getElementById('admin-media-table');
+  const pagination = document.getElementById('admin-media-pagination');
+  const orphansOnly = document.getElementById('admin-media-orphans-only')?.checked;
+
+  let items = adminMediaData;
+  if (orphansOnly) {
+    items = items.filter(m => !adminMediaReferencedIds.has(m.id));
+  }
+
+  if (items.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-state__text">No media found.</div></div>';
+    pagination.innerHTML = '';
+    return;
+  }
+
+  const perPage = 20;
+  const totalPages = Math.ceil(items.length / perPage);
+  if (adminMediaPage > totalPages) adminMediaPage = 1;
+  const start = (adminMediaPage - 1) * perPage;
+  const pageItems = items.slice(start, start + perPage);
+
+  container.innerHTML = `
+    <div class="admin-table-wrap">
+    <table class="admin-table">
+      <colgroup>
+        <col class="col-preview">
+        <col class="col-filename">
+        <col class="col-owner">
+        <col class="col-type">
+        <col class="col-size">
+        <col class="col-uploaded">
+        <col class="col-refs">
+        <col class="col-media-actions">
+      </colgroup>
+      <thead>
+        <tr>
+          <th></th>
+          <th>Filename</th>
+          <th>Owner</th>
+          <th>Type</th>
+          <th>Size</th>
+          <th>Uploaded</th>
+          <th>Referenced In</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${pageItems.map(m => {
+          const isOrphan = !adminMediaReferencedIds.has(m.id);
+          const isVideo = m.content_type && m.content_type.startsWith('video/');
+          const refs = adminMediaPostMap[m.id] || [];
+          const refLinks = refs.map(r => `<a href="#post/${r.postId}" onclick="event.stopPropagation();navigate('post','${r.postId}')">${esc(r.title)}</a>`).join(', ');
+          const date = new Date(m.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+          return `<tr class="${isOrphan ? 'admin-media-orphan' : ''}">
+            <td>${isVideo
+              ? `<video class="admin-media-preview" src="/api/media/${m.id}" muted></video>`
+              : `<img class="admin-media-preview" src="/api/media/${m.id}" alt="" loading="lazy">`}</td>
+            <td title="${esc(m.original_name)}">${esc(m.original_name)}</td>
+            <td>${esc(getUsername(m.user_id))}</td>
+            <td>${esc(m.content_type)}</td>
+            <td>${formatFileSize(m.size)}</td>
+            <td>${date}</td>
+            <td class="cell-wrap">${refLinks || '<span style="color:var(--text-muted)">None (orphan)</span>'}</td>
+            <td class="actions"><button class="btn btn--danger btn--sm" onclick="adminDeleteMedia('${m.id}')">Delete</button></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    </div>`;
+
+  if (totalPages > 1) {
+    pagination.innerHTML = `
+      <button ${adminMediaPage <= 1 ? 'disabled' : ''} onclick="adminMediaPage--;renderAdminMediaTable()">&larr; Prev</button>
+      <span>Page ${adminMediaPage} of ${totalPages}</span>
+      <button ${adminMediaPage >= totalPages ? 'disabled' : ''} onclick="adminMediaPage++;renderAdminMediaTable()">Next &rarr;</button>`;
+  } else {
+    pagination.innerHTML = '';
+  }
+}
+
+async function fetchAllPosts() {
+  const allPosts = [];
+  let page = 1;
+  while (true) {
+    const data = await apiFetch(`/api/posts?page=${page}&limit=100`);
+    const posts = data.posts || data.data || data || [];
+    if (!Array.isArray(posts) || posts.length === 0) break;
+    allPosts.push(...posts);
+    const total = data.total || posts.length;
+    if (allPosts.length >= total) break;
+    page++;
+  }
+  return allPosts;
+}
+
+function extractAllMediaIds(content) {
+  const ids = [];
+  const regex = /\/api\/media\/([a-f0-9-]+)/g;
+  let m;
+  while ((m = regex.exec(content)) !== null) ids.push(m[1]);
+  return ids;
+}
+
+function formatFileSize(bytes) {
+  if (bytes == null) return '—';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+}
+
+async function adminDeleteMedia(mediaId) {
+  if (!confirm('Delete this media file?')) return;
+  try {
+    await apiFetch(`/api/media/${mediaId}`, { method: 'DELETE' });
+    toast('Media deleted', 'info');
+    adminMediaData = adminMediaData.filter(m => m.id !== mediaId);
+    adminMediaReferencedIds.delete(mediaId);
+    delete adminMediaPostMap[mediaId];
+    renderAdminMediaTable();
+  } catch (err) {
+    toast(err.message || 'Delete failed', 'error');
+  }
+}
+
+async function deleteAllOrphans() {
+  const orphans = adminMediaData.filter(m => !adminMediaReferencedIds.has(m.id));
+  if (orphans.length === 0) { toast('No orphans to delete', 'info'); return; }
+  if (!confirm(`Delete ${orphans.length} orphaned media file${orphans.length > 1 ? 's' : ''}?`)) return;
+
+  let deleted = 0;
+  for (const m of orphans) {
+    try {
+      await apiFetch(`/api/media/${m.id}`, { method: 'DELETE' });
+      deleted++;
+    } catch (err) {
+      toast(`Failed to delete ${m.original_name}: ${err.message}`, 'error');
+    }
+  }
+  toast(`Deleted ${deleted} orphan${deleted !== 1 ? 's' : ''}`, 'success');
+  loadAdminMedia();
 }
 
 // Poll notifications every 30s if logged in
