@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
@@ -7,7 +8,8 @@ COPY services/post/package.json services/post/
 COPY services/comment/package.json services/comment/
 COPY services/notification/package.json services/notification/
 COPY services/frontend/package.json services/frontend/
-RUN npm install
+RUN --mount=type=cache,target=/root/.npm \
+    npm install
 
 FROM deps AS builder
 WORKDIR /app
