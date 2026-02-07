@@ -37,7 +37,7 @@ pub async fn aggregated_health(
     }
 
     let status = if all_healthy { "healthy" } else { "degraded" };
-    let code = if all_healthy { StatusCode::OK } else { StatusCode::OK };
+    let code = if all_healthy { StatusCode::OK } else { StatusCode::SERVICE_UNAVAILABLE };
 
     (
         code,

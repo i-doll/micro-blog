@@ -149,10 +149,10 @@ fn is_public_path(path: &str, method: &Method) -> bool {
     }
 
     // Read-only access is public; writes require JWT
-    if method == Method::GET || method == Method::HEAD || method == Method::OPTIONS {
-        if path.starts_with("/api/posts") || path.starts_with("/api/comments") || path.starts_with("/api/media") {
-            return true;
-        }
+    if (method == Method::GET || method == Method::HEAD || method == Method::OPTIONS)
+        && (path.starts_with("/api/posts") || path.starts_with("/api/comments") || path.starts_with("/api/media"))
+    {
+        return true;
     }
 
     false

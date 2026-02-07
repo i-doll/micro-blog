@@ -9,6 +9,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: "-Dwarnings"
+  DOCKER_BUILDKIT: "1"
 
 jobs:
   rust-check:
@@ -55,6 +56,8 @@ jobs:
           - { name: post, dockerfile: services/post/Dockerfile }
           - { name: comment, dockerfile: services/comment/Dockerfile }
           - { name: notification, dockerfile: services/notification/Dockerfile }
+          - { name: captcha, dockerfile: services/captcha/Dockerfile }
+          - { name: frontend, dockerfile: services/frontend/Dockerfile }
     steps:
       - uses: actions/checkout@v4
       - name: Build ${{ matrix.service.name }}

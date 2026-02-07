@@ -117,6 +117,7 @@ impl SearchIndex {
         });
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn add_post(
         &self,
         post_id: &str,
