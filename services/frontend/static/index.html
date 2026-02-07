@@ -1085,6 +1085,7 @@ textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
 .admin-panel-tab { display: none; }
 .admin-panel-tab.active { display: block; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>
 </head>
 <body>
 
@@ -1377,14 +1378,21 @@ let editingPostId = null;
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('blog_auth');
+  // Migrate token out of localStorage (insecure — accessible to XSS, persists indefinitely)
+  const legacy = localStorage.getItem('blog_auth');
+  if (legacy) {
+    sessionStorage.setItem('blog_auth', legacy);
+    localStorage.removeItem('blog_auth');
+  }
+
+  const saved = sessionStorage.getItem('blog_auth');
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
       state.token = parsed.token;
       state.user = parsed.user;
       updateAuthUI();
-    } catch(e) { localStorage.removeItem('blog_auth'); }
+    } catch(e) { sessionStorage.removeItem('blog_auth'); }
   }
 
   const savedTheme = localStorage.getItem('blog_theme') || 'light';
@@ -1550,7 +1558,7 @@ async function handleLogin(e) {
     });
     state.token = data.access_token;
     state.user = data.user;
-    localStorage.setItem('blog_auth', JSON.stringify({ token: state.token, user: state.user }));
+    sessionStorage.setItem('blog_auth', JSON.stringify({ token: state.token, user: state.user }));
     updateAuthUI();
     toast('Welcome back, ' + state.user.username, 'success');
     navigate('home');
@@ -1585,7 +1593,7 @@ async function handleRegister(e) {
 function logout() {
   state.token = null;
   state.user = null;
-  localStorage.removeItem('blog_auth');
+  sessionStorage.removeItem('blog_auth');
   updateAuthUI();
   toast('Signed out', 'info');
   navigate('home');
@@ -2020,7 +2028,7 @@ async function saveProfile() {
     });
     state.user.username = username;
     state.user.bio = bio;
-    localStorage.setItem('blog_auth', JSON.stringify({ token: state.token, user: state.user }));
+    sessionStorage.setItem('blog_auth', JSON.stringify({ token: state.token, user: state.user }));
     closeModal('edit-profile-modal');
     toast('Profile updated', 'success');
     loadProfile();
@@ -2070,18 +2078,38 @@ async function loadHealth() {
 }
 
 // ===== MARKDOWN RENDERING =====
+// DOMPurify config: only allow tags/attrs that our markdown renderer produces
+const PURIFY_CONFIG = {
+  ALLOWED_TAGS: ['h1','h2','h3','p','a','strong','em','code','pre','blockquote','ul','ol','li','hr','img','br'],
+  ALLOWED_ATTR: ['href','target','rel','src','alt'],
+  ALLOW_DATA_ATTR: false,
+};
+
 function renderMarkdown(text) {
   if (!text) return '';
-  let html = text;
 
-  // Code blocks (```)
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
-    return `<pre><code>${esc(code.trim())}</code></pre>`;
+  // Phase 1: Extract code blocks and inline code into safe placeholders.
+  // Their content is escaped immediately so it can never execute.
+  const codeBlocks = [];
+  let html = text.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+    const idx = codeBlocks.length;
+    codeBlocks.push(`<pre><code>${esc(code.trim())}</code></pre>`);
+    return `%%CODEBLOCK_${idx}%%`;
   });
 
-  // Inline code
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  const inlineCodes = [];
+  html = html.replace(/`([^`]+)`/g, (_, code) => {
+    const idx = inlineCodes.length;
+    inlineCodes.push(`<code>${esc(code)}</code>`);
+    return `%%INLINE_${idx}%%`;
+  });
 
+  // Phase 2: Escape ALL remaining HTML so user-injected tags become inert.
+  // Markdown syntax chars (*, #, -, [, ], (, )) are not HTML special chars
+  // and survive escaping unchanged.
+  html = esc(html);
+
+  // Phase 3: Apply markdown transforms on the now-safe text.
   // Headers
   html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
   html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
@@ -2092,17 +2120,28 @@ function renderMarkdown(text) {
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
 
-  // Blockquote
-  html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+  // Blockquote (> was escaped to &gt;)
+  html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
 
   // Horizontal rule
   html = html.replace(/^---$/gm, '<hr>');
 
-  // Images
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
+  // Images — protocol whitelist prevents javascript: URIs.
+  // Content is already escaped so attribute breakout is impossible.
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, src) => {
+    if (/^https?:\/\//.test(src) || src.startsWith('/')) {
+      return `<img src="${src}" alt="${alt}">`;
+    }
+    return '';
+  });
 
-  // Links
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  // Links — protocol whitelist prevents javascript: URIs
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => {
+    if (/^https?:\/\//.test(url) || url.startsWith('/') || url.startsWith('#') || url.startsWith('mailto:')) {
+      return `<a href="${url}" target="_blank" rel="noopener">${label}</a>`;
+    }
+    return label;
+  });
 
   // Unordered lists
   html = html.replace(/(?:^|\n)((?:- .+\n?)+)/g, (_, list) => {
@@ -2122,6 +2161,19 @@ function renderMarkdown(text) {
   html = html.replace(/<p>\s*(<h[1-6]|<pre|<blockquote|<ul|<ol|<hr)/g, '$1');
   html = html.replace(/(<\/h[1-6]>|<\/pre>|<\/blockquote>|<\/ul>|<\/ol>|<hr>)\s*<\/p>/g, '$1');
   html = html.replace(/<p>\s*<\/p>/g, '');
+
+  // Phase 4: Restore code placeholders
+  codeBlocks.forEach((block, i) => {
+    html = html.replace(`%%CODEBLOCK_${i}%%`, block);
+  });
+  inlineCodes.forEach((code, i) => {
+    html = html.replace(`%%INLINE_${i}%%`, code);
+  });
+
+  // Phase 5: Defense-in-depth — DOMPurify strips anything that slipped through
+  if (typeof DOMPurify !== 'undefined') {
+    html = DOMPurify.sanitize(html, PURIFY_CONFIG);
+  }
 
   return html;
 }
@@ -2392,6 +2444,170 @@ async function adminArchivePost(postId) {
 setInterval(() => {
   if (state.token) loadNotifications();
 }, 30000);
+
+// ===== SECURITY TESTS =====
+// Run from browser console: runSecurityTests()
+function runSecurityTests() {
+  const results = [];
+  let passed = 0;
+  let failed = 0;
+
+  function assert(name, html, forbiddenPattern) {
+    // Parse the rendered HTML and check that no dangerous content survives
+    const div = document.createElement('div');
+    div.innerHTML = html;
+
+    let safe = true;
+    const reasons = [];
+
+    // Check for script elements
+    if (div.querySelector('script')) {
+      safe = false;
+      reasons.push('contains <script> element');
+    }
+
+    // Check for event handler attributes on any element
+    for (const el of div.querySelectorAll('*')) {
+      for (const attr of el.attributes) {
+        if (attr.name.startsWith('on')) {
+          safe = false;
+          reasons.push(`element <${el.tagName.toLowerCase()}> has event handler: ${attr.name}`);
+        }
+      }
+      // Check for javascript: URLs
+      const href = el.getAttribute('href');
+      const src = el.getAttribute('src');
+      if (href && /^\s*javascript:/i.test(href)) {
+        safe = false;
+        reasons.push(`element <${el.tagName.toLowerCase()}> has javascript: href`);
+      }
+      if (src && /^\s*javascript:/i.test(src)) {
+        safe = false;
+        reasons.push(`element <${el.tagName.toLowerCase()}> has javascript: src`);
+      }
+    }
+
+    // Optional: check raw HTML for a specific forbidden string
+    if (forbiddenPattern && forbiddenPattern.test(html)) {
+      safe = false;
+      reasons.push(`raw HTML matches forbidden pattern: ${forbiddenPattern}`);
+    }
+
+    if (safe) {
+      passed++;
+      results.push({ name, status: 'PASS' });
+    } else {
+      failed++;
+      results.push({ name, status: 'FAIL', reasons, html });
+    }
+  }
+
+  // 1. Script tag injection
+  assert(
+    '<script> tag in text',
+    renderMarkdown('Hello <script>alert("XSS")</script> world'),
+  );
+
+  // 2. Script tag in heading
+  assert(
+    '<script> in heading',
+    renderMarkdown('# <script>alert(1)</script>'),
+  );
+
+  // 3. Image onerror event handler
+  assert(
+    'img onerror handler',
+    renderMarkdown('![x](x" onerror="alert(1))'),
+  );
+
+  // 4. Image with javascript: src
+  assert(
+    'img javascript: src',
+    renderMarkdown('![xss](javascript:alert(1))'),
+  );
+
+  // 5. Link with javascript: href
+  assert(
+    'link javascript: href',
+    renderMarkdown('[click me](javascript:alert(document.cookie))'),
+  );
+
+  // 6. Event handler in bold text
+  assert(
+    'event handler in bold',
+    renderMarkdown('**<img src=x onerror=alert(1)>**'),
+  );
+
+  // 7. SVG/onload injection
+  assert(
+    'svg onload',
+    renderMarkdown('<svg onload="alert(1)">'),
+  );
+
+  // 8. Nested script in inline code context
+  assert(
+    'script in inline code',
+    renderMarkdown('`<script>alert(1)</script>`'),
+    /(?<!&lt;)script(?!&gt;)/ // should be entity-escaped
+  );
+
+  // 9. Data URI in image
+  assert(
+    'data: URI in image',
+    renderMarkdown('![x](data:text/html,<script>alert(1)</script>)'),
+  );
+
+  // 10. Attribute breakout in link
+  assert(
+    'attribute breakout in link href',
+    renderMarkdown('[x](https://example.com" onclick="alert(1))'),
+  );
+
+  // 11. iframe injection
+  assert(
+    'iframe injection',
+    renderMarkdown('<iframe src="https://evil.com"></iframe>'),
+  );
+
+  // 12. Body/style injection
+  assert(
+    'style/body tag injection',
+    renderMarkdown('<style>body{display:none}</style><body onload=alert(1)>'),
+  );
+
+  // 13. Mixed markdown + HTML injection
+  assert(
+    'markdown heading with embedded HTML event',
+    renderMarkdown('## Title <img src=x onerror=alert(1)>'),
+  );
+
+  // 14. javascript: with mixed case and whitespace
+  assert(
+    'javascript: URL obfuscation',
+    renderMarkdown('[click](JaVaScRiPt:alert(1))'),
+  );
+
+  // 15. Null byte injection
+  assert(
+    'null byte in script tag',
+    renderMarkdown('Hello <scr\x00ipt>alert(1)</script> world'),
+  );
+
+  // Print results
+  console.group('Security Tests: ' + passed + ' passed, ' + failed + ' failed');
+  for (const r of results) {
+    if (r.status === 'PASS') {
+      console.log('%c PASS %c ' + r.name, 'background:#3a7d44;color:#fff;padding:1px 4px;border-radius:2px', '');
+    } else {
+      console.error('%c FAIL %c ' + r.name, 'background:#c0392b;color:#fff;padding:1px 4px;border-radius:2px', '');
+      console.error('  Reasons:', r.reasons.join('; '));
+      console.error('  HTML:', r.html);
+    }
+  }
+  console.groupEnd();
+
+  return { passed, failed, results };
+}
 </script>
 
 </body>
