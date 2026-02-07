@@ -1642,6 +1642,8 @@ async function loadPosts(page) {
       return;
     }
 
+    await resolveUsernames(posts.map(p => p.author_id));
+
     container.innerHTML = posts.map((post, i) => {
       const date = new Date(post.published_at || post.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
       const excerpt = stripMarkdown(post.content || '').slice(0, 250);
@@ -1651,7 +1653,7 @@ async function loadPosts(page) {
       return `
         <div class="post-card${featured}" onclick="navigate('post','${post.id}')">
           <div class="post-card__meta">
-            <span>${esc(post.author_name || 'Anonymous')}</span>
+            <span>${esc(getUsername(post.author_id))}</span>
             <span>&middot;</span>
             <span>${date}</span>
             ${post.status === 'draft' ? '<span class="tag" style="background:var(--warning);color:#000">Draft</span>' : ''}
@@ -1690,6 +1692,7 @@ async function loadPost(id) {
   try {
     const post = await apiFetch(`/api/posts/${id}`);
     state.currentPost = post;
+    await resolveUsernames([post.author_id]);
     const date = new Date(post.published_at || post.created_at).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
     const tags = (post.tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join('');
     const isOwner = state.user && (state.user.id === post.author_id || state.user.role === 'admin');
@@ -1697,7 +1700,7 @@ async function loadPost(id) {
     header.innerHTML = `
       <h1 class="post-header__title">${esc(post.title)}</h1>
       <div class="post-header__meta">
-        <span>${esc(post.author_name || 'Anonymous')}</span>
+        <span>${esc(getUsername(post.author_id))}</span>
         <span class="dot">&middot;</span>
         <span>${date}</span>
         ${post.status !== 'published' ? `<span class="tag" style="background:var(--warning);color:#000">${esc(post.status)}</span>` : ''}
@@ -1804,6 +1807,8 @@ async function loadComments(postId) {
       return;
     }
 
+    await resolveUsernames(comments.map(c => c.author_id));
+
     // Build threaded view
     const topLevel = comments.filter(c => !c.parent_id);
     const replies = comments.filter(c => c.parent_id);
@@ -1827,12 +1832,12 @@ function renderComment(comment, replyMap) {
   return `
     <div class="comment" id="comment-${comment.id}">
       <div class="comment__header">
-        <span class="comment__author">${esc(comment.author_name || 'Anonymous')}</span>
+        <span class="comment__author">${esc(getUsername(comment.author_id))}</span>
         <span class="comment__date">${date}</span>
       </div>
       <div class="comment__body">${esc(comment.content)}</div>
       <div class="comment__actions">
-        ${state.user ? `<button onclick="setReply('${comment.id}','${esc(comment.author_name || 'Anonymous')}')">Reply</button>` : ''}
+        ${state.user ? `<button onclick="setReply('${comment.id}','${esc(getUsername(comment.author_id))}')">Reply</button>` : ''}
         ${canDelete ? `<button onclick="deleteComment('${comment.id}')" style="margin-left:0.5rem">Delete</button>` : ''}
       </div>
       ${childReplies.map(r => `<div class="comment--reply">${renderComment(r, replyMap)}</div>`).join('')}
@@ -2235,6 +2240,25 @@ function renderMarkdown(text) {
   return html;
 }
 
+// ===== USERNAME RESOLUTION =====
+const usernameCache = {};
+
+async function resolveUsernames(ids) {
+  const unique = [...new Set(ids.filter(Boolean))];
+  const missing = unique.filter(id => !(id in usernameCache));
+  await Promise.all(missing.map(async id => {
+    try {
+      const u = await apiFetch(`/api/users/${id}`);
+      usernameCache[id] = u.username;
+    } catch(e) { usernameCache[id] = null; }
+  }));
+  return usernameCache;
+}
+
+function getUsername(id) {
+  return usernameCache[id] || 'Anonymous';
+}
+
 function stripMarkdown(text) {
   return text
     .replace(/```[\s\S]*?```/g, '')
@@ -2404,6 +2428,8 @@ async function loadAdminPosts(page = 1) {
       return;
     }
 
+    await resolveUsernames(posts.map(p => p.author_id));
+
     container.innerHTML = `
       <table class="admin-table">
         <thead>
@@ -2431,7 +2457,7 @@ async function loadAdminPosts(page = 1) {
 
             return `<tr>
               <td><a href="#" onclick="navigate('post','${p.id}');return false" style="color:var(--text-primary);font-weight:500">${esc(p.title)}</a></td>
-              <td>${esc(p.author_name || 'Unknown')}</td>
+              <td>${esc(getUsername(p.author_id))}</td>
               <td>${statusBadge}</td>
               <td>${date}</td>
               <td class="actions">
