@@ -81,3 +81,5 @@ All services read from environment:
 - PostgreSQL init script runs only on first container start (volumes must be fresh)
 - NATS JetStream stream is created by the first service that connects
 - The gateway does NOT validate JWTs on `POST /api/auth/register` and `POST /api/auth/login`
+- All Docker images must be built with `--network=host` (DNS resolution fails otherwise). Skaffold and `kind-setup.sh` already handle this; for manual builds use e.g. `docker build --network=host -t blog/gateway -f crates/gateway/Dockerfile .`
+- Kind deployments use the `:dev` image tag. When manually building and loading images into Kind, always tag as `:dev` (e.g. `docker build -t blog/frontend:dev ...`, then `kind load docker-image blog/frontend:dev --name blog`, then `kubectl rollout restart deployment/frontend -n blog`). Using `:latest` won't match what the deployments expect.

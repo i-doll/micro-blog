@@ -150,7 +150,7 @@ fn is_public_path(path: &str, method: &Method) -> bool {
 
     // Read-only access is public; writes require JWT
     if method == Method::GET || method == Method::HEAD || method == Method::OPTIONS {
-        if path.starts_with("/api/posts") || path.starts_with("/api/comments") {
+        if path.starts_with("/api/posts") || path.starts_with("/api/comments") || path.starts_with("/api/media") {
             return true;
         }
     }
@@ -212,10 +212,25 @@ mod tests {
     }
 
     #[test]
+    fn test_media_get_is_public() {
+        assert!(is_public_path("/api/media", &Method::GET));
+        assert!(is_public_path("/api/media/123", &Method::GET));
+        assert!(is_public_path("/api/media", &Method::HEAD));
+        assert!(is_public_path("/api/media", &Method::OPTIONS));
+    }
+
+    #[test]
+    fn test_media_mutating_requires_auth() {
+        assert!(!is_public_path("/api/media", &Method::POST));
+        assert!(!is_public_path("/api/media/123", &Method::PUT));
+        assert!(!is_public_path("/api/media/123", &Method::DELETE));
+        assert!(!is_public_path("/api/media/123", &Method::PATCH));
+    }
+
+    #[test]
     fn test_other_paths_not_public() {
         assert!(!is_public_path("/api/notifications", &Method::GET));
         assert!(!is_public_path("/api/users", &Method::GET));
-        assert!(!is_public_path("/api/media", &Method::POST));
     }
 
     #[test]

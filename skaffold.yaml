@@ -11,38 +11,47 @@ build:
       context: .
       docker:
         dockerfile: crates/gateway/Dockerfile
+        network: host
     - image: blog/search
       context: .
       docker:
         dockerfile: crates/search/Dockerfile
+        network: host
     - image: blog/media
       context: .
       docker:
         dockerfile: crates/media/Dockerfile
+        network: host
     - image: blog/user
       context: .
       docker:
         dockerfile: services/user/Dockerfile
+        network: host
     - image: blog/post
       context: .
       docker:
         dockerfile: services/post/Dockerfile
+        network: host
     - image: blog/comment
       context: .
       docker:
         dockerfile: services/comment/Dockerfile
+        network: host
     - image: blog/notification
       context: .
       docker:
         dockerfile: services/notification/Dockerfile
+        network: host
     - image: blog/captcha
       context: .
       docker:
         dockerfile: services/captcha/Dockerfile
+        network: host
     - image: blog/frontend
       context: .
       docker:
         dockerfile: services/frontend/Dockerfile
+        network: host
 
 manifests:
   kustomize:

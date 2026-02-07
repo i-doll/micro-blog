@@ -58,7 +58,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build ${{ matrix.service.name }}
-        run: docker build -t blog/${{ matrix.service.name }}:ci -f ${{ matrix.service.dockerfile }} .
+        run: docker build --network=host -t blog/${{ matrix.service.name }}:ci -f ${{ matrix.service.dockerfile }} .
 
   k8s-validate:
     name: Validate K8s Manifests
