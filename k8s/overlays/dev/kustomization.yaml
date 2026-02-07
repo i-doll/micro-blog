@@ -12,3 +12,32 @@ patches:
       - op: replace
         path: /data/LOG_LEVEL
         value: debug
+
+  - target:
+      kind: Secret
+      name: blog-secrets
+    patch: |
+      - op: replace
+        path: /stringData/POSTGRES_PASSWORD
+        value: password
+      - op: replace
+        path: /stringData/JWT_SECRET
+        value: dev-jwt-secret-do-not-use-in-production
+      - op: replace
+        path: /stringData/CAPTCHA_SECRET
+        value: dev-captcha-secret-do-not-use-in-production
+      - op: replace
+        path: /stringData/USER_DB_URL
+        value: postgresql://user_service:password@postgres:5432/blog_users
+      - op: replace
+        path: /stringData/POST_DB_URL
+        value: postgresql://post_service:password@postgres:5432/blog_posts
+      - op: replace
+        path: /stringData/COMMENT_DB_URL
+        value: postgresql://comment_service:password@postgres:5432/blog_comments
+      - op: replace
+        path: /stringData/NOTIFICATION_DB_URL
+        value: postgresql://notification_service:password@postgres:5432/blog_notifications
+      - op: replace
+        path: /stringData/MEDIA_DB_URL
+        value: postgresql://media_service:password@postgres:5432/blog_media
