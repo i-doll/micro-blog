@@ -1250,6 +1250,14 @@ textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
           <label class="form-label" for="reg-password">Password</label>
           <input type="password" id="reg-password" minlength="8" required>
         </div>
+        <div class="form-group">
+          <label class="form-label">Verify you are human</label>
+          <div id="captcha-register" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem">
+            <div id="captcha-register-image" style="border:1px solid var(--rule-color);border-radius:4px;overflow:hidden;line-height:0"></div>
+            <button type="button" class="btn btn--ghost btn--small" onclick="loadCaptcha('register')" title="New captcha">&#x21bb;</button>
+          </div>
+          <input type="text" id="captcha-register-input" placeholder="Enter the text above" maxlength="10" required autocomplete="off">
+        </div>
         <div id="register-error" class="form-error hidden"></div>
         <button class="btn btn--primary mt-1" style="width:100%;justify-content:center" type="submit">Create Account</button>
       </form>
@@ -1396,6 +1404,8 @@ let state = {
   postsLimit: 20,
 };
 
+let captchaState = { register: null };
+
 let editingPostId = null;
 
 // ===== INIT =====
@@ -1473,7 +1483,7 @@ function navigate(view, param, noHash) {
     case 'post': loadPost(param); break;
     case 'search': document.getElementById('search-input').focus(); break;
     case 'login': break;
-    case 'register': break;
+    case 'register': loadCaptcha('register'); break;
     case 'compose':
       if (!state.token) { navigate('login'); return; }
       document.getElementById('compose-title').value = '';
@@ -1590,6 +1600,31 @@ async function handleLogin(e) {
   }
 }
 
+async function loadCaptcha(context) {
+  try {
+    const data = await apiFetch('/api/captcha/challenge');
+    captchaState[context] = data.id;
+    const container = document.getElementById('captcha-' + context + '-image');
+    if (container) container.innerHTML = data.image;
+    const input = document.getElementById('captcha-' + context + '-input');
+    if (input) input.value = '';
+  } catch(err) {
+    console.error('Failed to load captcha:', err);
+  }
+}
+
+async function verifyCaptcha(context) {
+  const id = captchaState[context];
+  const input = document.getElementById('captcha-' + context + '-input');
+  const answer = input ? input.value.trim() : '';
+  if (!id || !answer) throw { message: 'Please complete the captcha' };
+  const data = await apiFetch('/api/captcha/verify', {
+    method: 'POST',
+    body: JSON.stringify({ id, answer }),
+  });
+  return data.captcha_token;
+}
+
 async function handleRegister(e) {
   e.preventDefault();
   const errEl = document.getElementById('register-error');
@@ -1600,8 +1635,10 @@ async function handleRegister(e) {
   const password = document.getElementById('reg-password').value;
 
   try {
+    const captchaToken = await verifyCaptcha('register');
     await apiFetch('/api/auth/register', {
       method: 'POST',
+      headers: { 'X-Captcha-Token': captchaToken },
       body: JSON.stringify({ username, email, password }),
     });
     toast('Account created! Please sign in.', 'success');
@@ -1609,6 +1646,7 @@ async function handleRegister(e) {
   } catch(err) {
     errEl.textContent = err.message;
     errEl.classList.remove('hidden');
+    loadCaptcha('register');
   }
 }
 

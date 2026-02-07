@@ -35,6 +35,10 @@ build:
       context: .
       docker:
         dockerfile: services/notification/Dockerfile
+    - image: blog/captcha
+      context: .
+      docker:
+        dockerfile: services/captcha/Dockerfile
     - image: blog/frontend
       context: .
       docker:

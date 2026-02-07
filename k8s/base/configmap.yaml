@@ -11,5 +11,6 @@ data:
   NOTIFICATION_SERVICE_URL: "http://notification-service:3004"
   SEARCH_SERVICE_URL: "http://search-service:3005"
   MEDIA_SERVICE_URL: "http://media-service:3006"
+  CAPTCHA_SERVICE_URL: "http://captcha-service:3008"
   CORS_ORIGINS: "http://localhost:3007"
   LOG_LEVEL: "info"

@@ -87,6 +87,8 @@ fn route_to_service(path: &str, config: &Config) -> Option<(String, String)> {
         &config.search_service_url
     } else if rest.starts_with("/media") {
         &config.media_service_url
+    } else if rest.starts_with("/captcha") {
+        &config.captcha_service_url
     } else {
         return None;
     };

@@ -26,6 +26,11 @@ spec:
                 secretKeyRef:
                   name: blog-secrets
                   key: JWT_SECRET
+            - name: CAPTCHA_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: blog-secrets
+                  key: CAPTCHA_SECRET
           envFrom:
             - configMapRef:
                 name: blog-config

@@ -8,7 +8,7 @@ use axum::{
     Router,
 };
 use std::time::Duration;
-use axum::http::{self, HeaderValue, Method};
+use axum::http::{self, HeaderName, HeaderValue, Method};
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
@@ -40,13 +40,14 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let jwt_secret = config.jwt_secret.clone();
+    let captcha_secret = config.captcha_secret.clone();
     let rate_limit_state = RateLimitState::new(100, config.trusted_proxies.clone());
 
     let app = Router::new()
         .route("/health", get(aggregated_health))
         .fallback(any(proxy_handler))
         .layer(from_fn(move |req, next| {
-            jwt_auth(jwt_secret.clone(), req, next)
+            jwt_auth(jwt_secret.clone(), captcha_secret.clone(), req, next)
         }))
         .layer(from_fn({
             let rls = rate_limit_state.clone();
@@ -74,7 +75,11 @@ async fn main() -> anyhow::Result<()> {
                         Method::DELETE,
                         Method::OPTIONS,
                     ])
-                    .allow_headers([http::header::CONTENT_TYPE, http::header::AUTHORIZATION])
+                    .allow_headers([
+                        http::header::CONTENT_TYPE,
+                        http::header::AUTHORIZATION,
+                        HeaderName::from_static("x-captcha-token"),
+                    ])
                     .allow_credentials(true)
                     .max_age(Duration::from_secs(3600))
             }

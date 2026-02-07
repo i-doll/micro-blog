@@ -13,6 +13,7 @@ pub async fn aggregated_health(
         ("notification-service", &state.config.notification_service_url),
         ("search-service", &state.config.search_service_url),
         ("media-service", &state.config.media_service_url),
+        ("captcha-service", &state.config.captcha_service_url),
     ];
 
     let mut results = serde_json::Map::new();

@@ -6,27 +6,39 @@ use axum::{
     Json,
 };
 use blog_shared::jwt::decode_jwt;
+use jsonwebtoken::{decode, DecodingKey, Validation};
+use serde::Deserialize;
 use serde_json::json;
 
 static X_USER_ID: HeaderName = HeaderName::from_static("x-user-id");
 static X_USER_ROLE: HeaderName = HeaderName::from_static("x-user-role");
 static X_USERNAME: HeaderName = HeaderName::from_static("x-username");
+static X_CAPTCHA_TOKEN: HeaderName = HeaderName::from_static("x-captcha-token");
 
 pub async fn jwt_auth(
     jwt_secret: String,
+    captcha_secret: String,
     mut request: Request,
     next: Next,
 ) -> Result<Response, (StatusCode, Json<serde_json::Value>)> {
+    // Save captcha token before stripping (gateway validates it, not downstream).
+    let captcha_token = request
+        .headers()
+        .get(&X_CAPTCHA_TOKEN)
+        .and_then(|v| v.to_str().ok())
+        .map(String::from);
+
     // Always strip inbound identity headers to prevent spoofing.
     // These are only injected below after successful JWT verification.
     let headers = request.headers_mut();
     headers.remove(&X_USER_ID);
     headers.remove(&X_USER_ROLE);
     headers.remove(&X_USERNAME);
+    headers.remove(&X_CAPTCHA_TOKEN);
 
-    let path = request.uri().path();
+    let path = request.uri().path().to_string();
     let method = request.method().clone();
-    let is_public = is_public_path(path, &method);
+    let is_public = is_public_path(&path, &method);
 
     let auth_header = request
         .headers()
@@ -55,18 +67,66 @@ pub async fn jwt_auth(
                     X_USERNAME.clone(),
                     HeaderValue::from_str(&claims.username).unwrap(),
                 );
-                Ok(next.run(request).await)
             }
-            Err(_) if is_public => Ok(next.run(request).await),
-            Err(_) => Err((
-                StatusCode::UNAUTHORIZED,
-                Json(json!({"error": "Invalid or expired token"})),
-            )),
+            Err(_) if is_public => {}
+            Err(_) => {
+                return Err((
+                    StatusCode::UNAUTHORIZED,
+                    Json(json!({"error": "Invalid or expired token"})),
+                ));
+            }
         },
-        None if is_public => Ok(next.run(request).await),
-        None => Err((
-            StatusCode::UNAUTHORIZED,
-            Json(json!({"error": "Missing or invalid authorization header"})),
+        None if is_public => {}
+        None => {
+            return Err((
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Missing or invalid authorization header"})),
+            ));
+        }
+    }
+
+    // Captcha verification for protected endpoints (e.g. registration)
+    if requires_captcha(&path, &method) {
+        verify_captcha_token(captcha_token.as_deref(), &captcha_secret)?;
+    }
+
+    Ok(next.run(request).await)
+}
+
+fn requires_captcha(path: &str, method: &Method) -> bool {
+    method == Method::POST && path == "/api/auth/register"
+}
+
+#[derive(Deserialize)]
+struct CaptchaClaims {
+    v: bool,
+}
+
+fn verify_captcha_token(
+    captcha_token: Option<&str>,
+    captcha_secret: &str,
+) -> Result<(), (StatusCode, Json<serde_json::Value>)> {
+    let token = match captcha_token {
+        Some(t) => t,
+        None => {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "Missing captcha token"})),
+            ));
+        }
+    };
+
+    let token_data = decode::<CaptchaClaims>(
+        token,
+        &DecodingKey::from_secret(captcha_secret.as_bytes()),
+        &Validation::default(),
+    );
+
+    match token_data {
+        Ok(data) if data.claims.v => Ok(()),
+        _ => Err((
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "Invalid or expired captcha token"})),
         )),
     }
 }
@@ -77,6 +137,10 @@ fn is_public_path(path: &str, method: &Method) -> bool {
         path,
         "/health" | "/api/auth/register" | "/api/auth/login" | "/api/auth/refresh"
     ) {
+        return true;
+    }
+
+    if path.starts_with("/api/captcha") {
         return true;
     }
 
@@ -113,6 +177,12 @@ mod tests {
     }
 
     #[test]
+    fn test_captcha_is_public() {
+        assert!(is_public_path("/api/captcha/challenge", &Method::GET));
+        assert!(is_public_path("/api/captcha/verify", &Method::POST));
+    }
+
+    #[test]
     fn test_posts_get_is_public() {
         assert!(is_public_path("/api/posts", &Method::GET));
         assert!(is_public_path("/api/posts/123", &Method::GET));
@@ -146,5 +216,13 @@ mod tests {
         assert!(!is_public_path("/api/notifications", &Method::GET));
         assert!(!is_public_path("/api/users", &Method::GET));
         assert!(!is_public_path("/api/media", &Method::POST));
+    }
+
+    #[test]
+    fn test_requires_captcha() {
+        assert!(requires_captcha("/api/auth/register", &Method::POST));
+        assert!(!requires_captcha("/api/auth/register", &Method::GET));
+        assert!(!requires_captcha("/api/auth/login", &Method::POST));
+        assert!(!requires_captcha("/api/posts", &Method::POST));
     }
 }

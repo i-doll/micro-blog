@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: captcha-service
+  namespace: blog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: captcha-service
+  template:
+    metadata:
+      labels:
+        app: captcha-service
+    spec:
+      containers:
+        - name: captcha-service
+          image: blog/captcha:dev
+          ports:
+            - containerPort: 3008
+          env:
+            - name: PORT
+              value: "3008"
+            - name: CAPTCHA_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: blog-secrets
+                  key: CAPTCHA_SECRET
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: blog-config
+                  key: LOG_LEVEL
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3008
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: captcha-service
+  namespace: blog
+spec:
+  selector:
+    app: captcha-service
+  ports:
+    - port: 3008
+      targetPort: 3008

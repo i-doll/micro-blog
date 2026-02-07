@@ -158,6 +158,17 @@ services:
       nats:
         condition: service_healthy
 
+  captcha-service:
+    build:
+      context: .
+      dockerfile: services/captcha/Dockerfile
+    ports:
+      - "3008:3008"
+    environment:
+      PORT: "3008"
+      CAPTCHA_SECRET: ${CAPTCHA_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+
   gateway:
     build:
       context: .
@@ -167,6 +178,7 @@ services:
     environment:
       PORT: "3000"
       JWT_SECRET: ${JWT_SECRET}
+      CAPTCHA_SECRET: ${CAPTCHA_SECRET}
       CORS_ORIGINS: ${CORS_ORIGINS}
       USER_SERVICE_URL: "http://user-service:3001"
       POST_SERVICE_URL: "http://post-service:3002"
@@ -174,6 +186,7 @@ services:
       NOTIFICATION_SERVICE_URL: "http://notification-service:3004"
       SEARCH_SERVICE_URL: "http://search-query:3005"
       MEDIA_SERVICE_URL: "http://media-service:3006"
+      CAPTCHA_SERVICE_URL: "http://captcha-service:3008"
     depends_on:
       - user-service
       - post-service
@@ -181,6 +194,7 @@ services:
       - notification-service
       - search-query
       - media-service
+      - captcha-service
 
   frontend:
     build:

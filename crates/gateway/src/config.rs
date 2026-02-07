@@ -13,6 +13,8 @@ pub struct Config {
     pub notification_service_url: String,
     pub search_service_url: String,
     pub media_service_url: String,
+    pub captcha_service_url: String,
+    pub captcha_secret: String,
 }
 
 impl Config {
@@ -49,6 +51,10 @@ impl Config {
                 .unwrap_or_else(|_| "http://localhost:3005".to_string()),
             media_service_url: env::var("MEDIA_SERVICE_URL")
                 .unwrap_or_else(|_| "http://localhost:3006".to_string()),
+            captcha_service_url: env::var("CAPTCHA_SERVICE_URL")
+                .unwrap_or_else(|_| "http://localhost:3008".to_string()),
+            captcha_secret: env::var("CAPTCHA_SECRET")
+                .expect("FATAL: Required environment variable CAPTCHA_SECRET is not set"),
         }
     }
 }

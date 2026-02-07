@@ -14,6 +14,7 @@ use tower::ServiceExt;
 use uuid::Uuid;
 
 const TEST_SECRET: &str = "test-secret-for-integration-tests";
+const TEST_CAPTCHA_SECRET: &str = "test-captcha-secret";
 
 static X_USER_ID: HeaderName = HeaderName::from_static("x-user-id");
 static X_USER_ROLE: HeaderName = HeaderName::from_static("x-user-role");
@@ -23,13 +24,15 @@ static X_USERNAME: HeaderName = HeaderName::from_static("x-username");
 /// a handler that echoes back identity headers (so we can inspect them).
 fn test_app() -> Router {
     let jwt_secret = TEST_SECRET.to_string();
+    let captcha_secret = TEST_CAPTCHA_SECRET.to_string();
 
     Router::new()
         .route("/health", get(|| async { Json(json!({"status": "ok"})) }))
         .fallback(any(echo_identity_headers))
         .layer(middleware::from_fn(move |req: Request, next: Next| {
             let secret = jwt_secret.clone();
-            blog_gateway::middleware::auth::jwt_auth(secret, req, next)
+            let captcha = captcha_secret.clone();
+            blog_gateway::middleware::auth::jwt_auth(secret, captcha, req, next)
         }))
 }
 

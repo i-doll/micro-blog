@@ -7,6 +7,7 @@
     "services/post",
     "services/comment",
     "services/notification",
+    "services/captcha",
     "services/frontend"
   ],
   "scripts": {
@@ -15,6 +16,7 @@
     "dev:post": "npm run dev --workspace=services/post",
     "dev:comment": "npm run dev --workspace=services/comment",
     "dev:notification": "npm run dev --workspace=services/notification",
+    "dev:captcha": "npm run dev --workspace=services/captcha",
     "dev:frontend": "npm run dev --workspace=services/frontend"
   },
   "devDependencies": {

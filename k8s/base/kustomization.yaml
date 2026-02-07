@@ -17,4 +17,5 @@ resources:
   - notification/deployment.yaml
   - search/deployment.yaml
   - media/deployment.yaml
+  - captcha/deployment.yaml
   - frontend/deployment.yaml

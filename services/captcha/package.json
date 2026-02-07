@@ -1,0 +1,18 @@
+{
+  "name": "@blog/captcha",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@blog/shared": "*",
+    "fastify": "^5.2.0",
+    "@fastify/cors": "^11.0.0",
+    "jsonwebtoken": "^9.0.0",
+    "zod": "^3.24.0"
+  }
+}
