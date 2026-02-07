@@ -3,3 +3,4 @@ export * from './subjects.ts';
 export * from './schemas.ts';
 export * from './jwt.ts';
 export * from './errors.ts';
+export * from './cors.ts';

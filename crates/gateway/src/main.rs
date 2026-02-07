@@ -7,6 +7,8 @@ use axum::{
     routing::{any, get},
     Router,
 };
+use std::time::Duration;
+use axum::http::{self, HeaderValue, Method};
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
@@ -53,7 +55,30 @@ async fn main() -> anyhow::Result<()> {
                 rate_limit(rls, req, next)
             }
         }))
-        .layer(CorsLayer::permissive())
+        .layer({
+            let origins: Vec<HeaderValue> = config
+                .cors_origins
+                .iter()
+                .filter_map(|o| o.parse().ok())
+                .collect();
+            if origins.is_empty() {
+                // No origins configured — reject all cross-origin requests.
+                CorsLayer::new()
+            } else {
+                CorsLayer::new()
+                    .allow_origin(origins)
+                    .allow_methods([
+                        Method::GET,
+                        Method::POST,
+                        Method::PUT,
+                        Method::DELETE,
+                        Method::OPTIONS,
+                    ])
+                    .allow_headers([http::header::CONTENT_TYPE, http::header::AUTHORIZATION])
+                    .allow_credentials(true)
+                    .max_age(Duration::from_secs(3600))
+            }
+        })
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 

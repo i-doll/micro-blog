@@ -1,6 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import { AppError } from '@blog/shared';
+import { AppError, corsConfig } from '@blog/shared';
 import { ZodError } from 'zod';
 import { config } from './config.js';
 import { runMigrations } from './db/migrate.js';
@@ -12,7 +12,7 @@ import { subscribeUserDeleted } from './subscribers/user-deleted.js';
 
 const app = Fastify({ logger: { level: config.logLevel } });
 
-await app.register(cors);
+await app.register(cors, corsConfig());
 
 app.setErrorHandler((error, request, reply) => {
   if (error instanceof AppError) {
