@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: blog
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: "postgres"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: blog-secrets
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+            - name: init-scripts
+              mountPath: /docker-entrypoint-initdb.d
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: init-scripts
+          configMap:
+            name: postgres-init
+  volumeClaimTemplates:
+    - metadata:
+        name: pgdata
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: blog
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+  clusterIP: None
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: blog
+data:
+  init-databases.sh: |
+    #!/bin/bash
+    set -e
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+      CREATE DATABASE blog_users;
+      CREATE DATABASE blog_posts;
+      CREATE DATABASE blog_comments;
+      CREATE DATABASE blog_notifications;
+      CREATE DATABASE blog_media;
+      CREATE USER user_service WITH PASSWORD 'password';
+      CREATE USER post_service WITH PASSWORD 'password';
+      CREATE USER comment_service WITH PASSWORD 'password';
+      CREATE USER notification_service WITH PASSWORD 'password';
+      CREATE USER media_service WITH PASSWORD 'password';
+      GRANT ALL PRIVILEGES ON DATABASE blog_users TO user_service;
+      GRANT ALL PRIVILEGES ON DATABASE blog_posts TO post_service;
+      GRANT ALL PRIVILEGES ON DATABASE blog_comments TO comment_service;
+      GRANT ALL PRIVILEGES ON DATABASE blog_notifications TO notification_service;
+      GRANT ALL PRIVILEGES ON DATABASE blog_media TO media_service;
+    EOSQL
+    for db_user in "blog_users:user_service" "blog_posts:post_service" "blog_comments:comment_service" "blog_notifications:notification_service" "blog_media:media_service"; do
+      db="${db_user%%:*}"
+      user="${db_user##*:}"
+      psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$db" -c "GRANT ALL ON SCHEMA public TO $user;"
+    done

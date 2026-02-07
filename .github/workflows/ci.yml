@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-Dwarnings"
+
+jobs:
+  rust-check:
+    name: Rust Check & Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Check
+        run: cargo check --workspace
+      - name: Clippy
+        run: cargo clippy --workspace -- -D warnings
+      - name: Format
+        run: cargo fmt --all -- --check
+
+  typescript-check:
+    name: TypeScript Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm install
+      - name: Typecheck shared
+        run: npm run typecheck --workspace=services/shared
+
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: [rust-check, typescript-check]
+    strategy:
+      matrix:
+        service:
+          - { name: gateway, dockerfile: crates/gateway/Dockerfile }
+          - { name: search, dockerfile: crates/search/Dockerfile }
+          - { name: media, dockerfile: crates/media/Dockerfile }
+          - { name: user, dockerfile: services/user/Dockerfile }
+          - { name: post, dockerfile: services/post/Dockerfile }
+          - { name: comment, dockerfile: services/comment/Dockerfile }
+          - { name: notification, dockerfile: services/notification/Dockerfile }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build ${{ matrix.service.name }}
+        run: docker build -t blog/${{ matrix.service.name }}:ci -f ${{ matrix.service.dockerfile }} .
+
+  k8s-validate:
+    name: Validate K8s Manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate base kustomization
+        run: kubectl kustomize k8s/base > /dev/null
+      - name: Validate dev overlay
+        run: kubectl kustomize k8s/overlays/dev > /dev/null
+      - name: Validate production overlay
+        run: kubectl kustomize k8s/overlays/production > /dev/null

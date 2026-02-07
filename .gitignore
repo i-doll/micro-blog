@@ -1,0 +1,43 @@
+# Rust
+target/
+*.rs.bk
+
+# Node
+node_modules/
+dist/
+*.js
+*.js.map
+*.d.ts
+!jest.config.js
+!drizzle.config.ts
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/
+
+# Uploads
+uploads/
+
+# Tantivy index
+tantivy_index/
+
+# Logs
+*.log
+
+# Coverage
+coverage/

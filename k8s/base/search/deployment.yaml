@@ -1,0 +1,115 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: search-index
+  namespace: blog
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search-indexer
+  namespace: blog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: search-indexer
+  template:
+    metadata:
+      labels:
+        app: search-indexer
+    spec:
+      containers:
+        - name: search-indexer
+          image: blog/search:dev
+          ports:
+            - containerPort: 3005
+          env:
+            - name: MODE
+              value: "indexer"
+            - name: PORT
+              value: "3005"
+            - name: INDEX_PATH
+              value: "/data/tantivy_index"
+            - name: NATS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: blog-config
+                  key: NATS_URL
+          volumeMounts:
+            - name: search-index
+              mountPath: /data/tantivy_index
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3005
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: search-index
+          persistentVolumeClaim:
+            claimName: search-index
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search-query
+  namespace: blog
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: search-query
+  template:
+    metadata:
+      labels:
+        app: search-query
+    spec:
+      containers:
+        - name: search-query
+          image: blog/search:dev
+          ports:
+            - containerPort: 3005
+          env:
+            - name: MODE
+              value: "query"
+            - name: PORT
+              value: "3005"
+            - name: INDEX_PATH
+              value: "/data/tantivy_index"
+            - name: NATS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: blog-config
+                  key: NATS_URL
+          volumeMounts:
+            - name: search-index
+              mountPath: /data/tantivy_index
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3005
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: search-index
+          persistentVolumeClaim:
+            claimName: search-index
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: search-service
+  namespace: blog
+spec:
+  selector:
+    app: search-query
+  ports:
+    - port: 3005
+      targetPort: 3005

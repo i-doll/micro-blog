@@ -1,0 +1,194 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  nats:
+    image: nats:2.10-alpine
+    command: ["--jetstream", "--store_dir", "/data", "-p", "4222", "-m", "8222"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - natsdata:/data
+    healthcheck:
+      test: ["CMD", "nats-server", "--signal", "ldm"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  user-service:
+    build:
+      context: .
+      dockerfile: services/user/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: "3001"
+      DATABASE_URL: "postgresql://user_service:password@postgres:5432/blog_users"
+      NATS_URL: "nats://nats:4222"
+      JWT_SECRET: "dev-secret-change-in-production"
+      LOG_LEVEL: "info"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+
+  post-service:
+    build:
+      context: .
+      dockerfile: services/post/Dockerfile
+    ports:
+      - "3002:3002"
+    environment:
+      PORT: "3002"
+      DATABASE_URL: "postgresql://post_service:password@postgres:5432/blog_posts"
+      NATS_URL: "nats://nats:4222"
+      LOG_LEVEL: "info"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+
+  comment-service:
+    build:
+      context: .
+      dockerfile: services/comment/Dockerfile
+    ports:
+      - "3003:3003"
+    environment:
+      PORT: "3003"
+      DATABASE_URL: "postgresql://comment_service:password@postgres:5432/blog_comments"
+      NATS_URL: "nats://nats:4222"
+      LOG_LEVEL: "info"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification/Dockerfile
+    ports:
+      - "3004:3004"
+    environment:
+      PORT: "3004"
+      DATABASE_URL: "postgresql://notification_service:password@postgres:5432/blog_notifications"
+      NATS_URL: "nats://nats:4222"
+      LOG_LEVEL: "info"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+
+  search-indexer:
+    build:
+      context: .
+      dockerfile: crates/search/Dockerfile
+    environment:
+      MODE: "indexer"
+      PORT: "3005"
+      NATS_URL: "nats://nats:4222"
+      INDEX_PATH: "/data/tantivy_index"
+    volumes:
+      - searchdata:/data/tantivy_index
+    depends_on:
+      nats:
+        condition: service_healthy
+
+  search-query:
+    build:
+      context: .
+      dockerfile: crates/search/Dockerfile
+    ports:
+      - "3005:3005"
+    environment:
+      MODE: "query"
+      PORT: "3005"
+      NATS_URL: "nats://nats:4222"
+      INDEX_PATH: "/data/tantivy_index"
+    volumes:
+      - searchdata:/data/tantivy_index
+    depends_on:
+      search-indexer:
+        condition: service_started
+      nats:
+        condition: service_healthy
+
+  media-service:
+    build:
+      context: .
+      dockerfile: crates/media/Dockerfile
+    ports:
+      - "3006:3006"
+    environment:
+      PORT: "3006"
+      DATABASE_URL: "postgresql://media_service:password@postgres:5432/blog_media"
+      NATS_URL: "nats://nats:4222"
+      UPLOAD_DIR: "/data/uploads"
+    volumes:
+      - mediadata:/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+
+  gateway:
+    build:
+      context: .
+      dockerfile: crates/gateway/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      JWT_SECRET: "dev-secret-change-in-production"
+      USER_SERVICE_URL: "http://user-service:3001"
+      POST_SERVICE_URL: "http://post-service:3002"
+      COMMENT_SERVICE_URL: "http://comment-service:3003"
+      NOTIFICATION_SERVICE_URL: "http://notification-service:3004"
+      SEARCH_SERVICE_URL: "http://search-query:3005"
+      MEDIA_SERVICE_URL: "http://media-service:3006"
+    depends_on:
+      - user-service
+      - post-service
+      - comment-service
+      - notification-service
+      - search-query
+      - media-service
+
+  frontend:
+    build:
+      context: .
+      dockerfile: services/frontend/Dockerfile
+    ports:
+      - "3007:3007"
+    environment:
+      PORT: "3007"
+      API_URL: "http://localhost:3000"
+
+volumes:
+  pgdata:
+  natsdata:
+  mediadata:
+  searchdata:

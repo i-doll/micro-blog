@@ -1,0 +1,49 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: microservice-blog
+
+build:
+  local:
+    push: false
+  artifacts:
+    - image: blog/gateway
+      context: .
+      docker:
+        dockerfile: crates/gateway/Dockerfile
+    - image: blog/search
+      context: .
+      docker:
+        dockerfile: crates/search/Dockerfile
+    - image: blog/media
+      context: .
+      docker:
+        dockerfile: crates/media/Dockerfile
+    - image: blog/user
+      context: .
+      docker:
+        dockerfile: services/user/Dockerfile
+    - image: blog/post
+      context: .
+      docker:
+        dockerfile: services/post/Dockerfile
+    - image: blog/comment
+      context: .
+      docker:
+        dockerfile: services/comment/Dockerfile
+    - image: blog/notification
+      context: .
+      docker:
+        dockerfile: services/notification/Dockerfile
+    - image: blog/frontend
+      context: .
+      docker:
+        dockerfile: services/frontend/Dockerfile
+
+manifests:
+  kustomize:
+    paths:
+      - k8s/overlays/dev
+
+deploy:
+  kubectl: {}

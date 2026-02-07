@@ -1,0 +1,25 @@
+{
+  "name": "microservice-blog",
+  "private": true,
+  "workspaces": [
+    "services/shared",
+    "services/user",
+    "services/post",
+    "services/comment",
+    "services/notification",
+    "services/frontend"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "dev:user": "npm run dev --workspace=services/user",
+    "dev:post": "npm run dev --workspace=services/post",
+    "dev:comment": "npm run dev --workspace=services/comment",
+    "dev:notification": "npm run dev --workspace=services/notification",
+    "dev:frontend": "npm run dev --workspace=services/frontend"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "tsx": "^4.19.0",
+    "@types/node": "^22.0.0"
+  }
+}
