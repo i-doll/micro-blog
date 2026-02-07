@@ -28,7 +28,7 @@ export async function register(username: string, email: string, password: string
   }
 
   const password_hash = await bcrypt.hash(password, 12);
-  const role = email === 'five@faen.dev' ? 'admin' : 'user';
+  const role = assignRegistrationRole(email);
   const [user] = await db.insert(schema.users).values({
     username,
     email,
@@ -130,4 +130,52 @@ export async function refresh(refreshToken: string) {
   });
 
   return { access_token, refresh_token: newRefreshToken };
+}
+
+/**
+ * Determine the role assigned to a newly registered user.
+ * Always returns 'user' — admin privileges are never granted via registration.
+ * Admin accounts are bootstrapped at startup via ADMIN_EMAIL / ADMIN_PASSWORD env vars.
+ */
+export function assignRegistrationRole(_email: string): string {
+  return 'user';
+}
+
+/**
+ * Seed an admin user from environment variables at startup.
+ * If ADMIN_EMAIL and ADMIN_PASSWORD are set:
+ *   - Creates the admin user if no user with that email exists
+ *   - Promotes the existing user to admin if they already registered with 'user' role
+ * If the env vars are not set, this is a no-op.
+ */
+export async function bootstrapAdmin() {
+  const adminEmail = config.adminEmail;
+  const adminPassword = config.adminPassword;
+  if (!adminEmail || !adminPassword) return;
+
+  const adminUsername = config.adminUsername;
+
+  const existing = await db.query.users.findFirst({
+    where: (users, { eq }) => eq(users.email, adminEmail),
+  });
+
+  if (existing) {
+    if (existing.role !== 'admin') {
+      await db
+        .update(schema.users)
+        .set({ role: 'admin', updated_at: new Date() })
+        .where(eq(schema.users.id, existing.id));
+      console.log(`Promoted existing user ${adminEmail} to admin`);
+    }
+    return;
+  }
+
+  const password_hash = await bcrypt.hash(adminPassword, 12);
+  await db.insert(schema.users).values({
+    username: adminUsername,
+    email: adminEmail,
+    password_hash,
+    role: 'admin',
+  });
+  console.log(`Created admin user: ${adminEmail}`);
 }

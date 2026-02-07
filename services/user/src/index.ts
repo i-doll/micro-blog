@@ -7,6 +7,7 @@ import { runMigrations } from './db/migrate.js';
 import { connectNats, disconnectNats } from './services/nats.js';
 import { authRoutes } from './routes/auth.js';
 import { userRoutes } from './routes/users.js';
+import { bootstrapAdmin } from './services/auth.js';
 
 const app = Fastify({ logger: { level: config.logLevel } });
 
@@ -34,6 +35,7 @@ await app.register(userRoutes);
 // Start
 try {
   await runMigrations();
+  await bootstrapAdmin();
   await connectNats();
   await app.listen({ port: config.port, host: '0.0.0.0' });
   console.log(`User service listening on port ${config.port}`);
