@@ -115,7 +115,7 @@ export function HomePage() {
         </div>
       ) : posts.length === 0 ? (
         <EmptyState
-          icon="\u270D"
+          icon={"\u270D"}
           title="No stories yet"
           text="Be the first to write something."
         />

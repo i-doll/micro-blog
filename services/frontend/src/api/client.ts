@@ -30,6 +30,9 @@ export async function apiFetch<T>(
   const data = await resp.json().catch(() => null);
 
   if (!resp.ok) {
+    if (resp.status === 401 && token) {
+      window.dispatchEvent(new Event('auth:expired'));
+    }
     const error: ApiError = {
       status: resp.status,
       message: data?.error || data?.message || 'Request failed',

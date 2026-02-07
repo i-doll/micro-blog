@@ -56,6 +56,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state.token, state.user]);
 
+  useEffect(() => {
+    const onExpired = () => setState({ user: null, token: null });
+    window.addEventListener('auth:expired', onExpired);
+    return () => window.removeEventListener('auth:expired', onExpired);
+  }, []);
+
   const login = useCallback(async (email: string, password: string) => {
     const data = await authApi.login(email, password);
     setState({ token: data.access_token, user: data.user });
