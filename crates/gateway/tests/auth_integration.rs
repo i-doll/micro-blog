@@ -40,9 +40,18 @@ fn test_app() -> Router {
 /// after the auth middleware has processed it. This lets tests verify that
 /// headers are correctly injected or stripped.
 async fn echo_identity_headers(request: Request) -> Response {
-    let user_id = request.headers().get(&X_USER_ID).map(|v| v.to_str().unwrap_or("").to_string());
-    let user_role = request.headers().get(&X_USER_ROLE).map(|v| v.to_str().unwrap_or("").to_string());
-    let username = request.headers().get(&X_USERNAME).map(|v| v.to_str().unwrap_or("").to_string());
+    let user_id = request
+        .headers()
+        .get(&X_USER_ID)
+        .map(|v| v.to_str().unwrap_or("").to_string());
+    let user_role = request
+        .headers()
+        .get(&X_USER_ROLE)
+        .map(|v| v.to_str().unwrap_or("").to_string());
+    let username = request
+        .headers()
+        .get(&X_USERNAME)
+        .map(|v| v.to_str().unwrap_or("").to_string());
 
     Json(json!({
         "x_user_id": user_id,

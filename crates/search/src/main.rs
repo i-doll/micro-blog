@@ -36,8 +36,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             });
 
-            let app = Router::new()
-                .route("/health", get(handlers::health));
+            let app = Router::new().route("/health", get(handlers::health));
 
             let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;
             tracing::info!("Search indexer listening on port {port}");

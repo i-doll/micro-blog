@@ -60,13 +60,10 @@ pub async fn upload(
     })?;
 
     let original_name = sanitize_filename(field.file_name().unwrap_or("upload"));
-    let content_type = sanitize_content_type(
-        field.content_type().unwrap_or("application/octet-stream"),
-    );
+    let content_type =
+        sanitize_content_type(field.content_type().unwrap_or("application/octet-stream"));
 
-    let extension = sanitize_extension(
-        original_name.rsplit('.').next().unwrap_or("bin"),
-    );
+    let extension = sanitize_extension(original_name.rsplit('.').next().unwrap_or("bin"));
 
     let data = field.bytes().await.map_err(|e| {
         (
@@ -148,22 +145,37 @@ pub async fn download(
     .await
     .map_err(|e| {
         tracing::error!("DB error: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"})))
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "Database error"})),
+        )
     })?;
 
     let (filename, original_name, content_type) = row.ok_or_else(|| {
-        (StatusCode::NOT_FOUND, Json(json!({"error": "Media not found"})))
+        (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Media not found"})),
+        )
     })?;
 
     let path = state.storage.get_path(&filename);
     let data = tokio::fs::read(&path).await.map_err(|e| {
         tracing::error!("File read error: {}", e);
-        (StatusCode::NOT_FOUND, Json(json!({"error": "File not found on disk"})))
+        (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "File not found on disk"})),
+        )
     })?;
 
     let mut headers = HeaderMap::new();
-    headers.insert(header::CONTENT_TYPE, safe_content_type_header(&content_type));
-    headers.insert(header::CONTENT_DISPOSITION, content_disposition_header(&original_name));
+    headers.insert(
+        header::CONTENT_TYPE,
+        safe_content_type_header(&content_type),
+    );
+    headers.insert(
+        header::CONTENT_DISPOSITION,
+        content_disposition_header(&original_name),
+    );
 
     Ok((StatusCode::OK, headers, Body::from(data)))
 }
@@ -176,30 +188,40 @@ pub async fn delete(
     let user_id = headers
         .get("x-user-id")
         .and_then(|v| v.to_str().ok())
-        .ok_or_else(|| (StatusCode::UNAUTHORIZED, Json(json!({"error": "Missing user ID"}))))?;
+        .ok_or_else(|| {
+            (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Missing user ID"})),
+            )
+        })?;
 
-    let row = sqlx::query_as::<_, (String, Uuid)>(
-        "SELECT filename, user_id FROM media WHERE id = $1",
-    )
-    .bind(id)
-    .fetch_optional(&state.pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("DB error: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"})))
-    })?;
+    let row =
+        sqlx::query_as::<_, (String, Uuid)>("SELECT filename, user_id FROM media WHERE id = $1")
+            .bind(id)
+            .fetch_optional(&state.pool)
+            .await
+            .map_err(|e| {
+                tracing::error!("DB error: {}", e);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({"error": "Database error"})),
+                )
+            })?;
 
     let (filename, owner_id) = row.ok_or_else(|| {
-        (StatusCode::NOT_FOUND, Json(json!({"error": "Media not found"})))
+        (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Media not found"})),
+        )
     })?;
 
-    let is_admin = headers
-        .get("x-user-role")
-        .and_then(|v| v.to_str().ok())
-        == Some("admin");
+    let is_admin = headers.get("x-user-role").and_then(|v| v.to_str().ok()) == Some("admin");
 
     if owner_id.to_string() != user_id && !is_admin {
-        return Err((StatusCode::FORBIDDEN, Json(json!({"error": "Not the owner"}))));
+        return Err((
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "Not the owner"})),
+        ));
     }
 
     let _ = state.storage.delete(&filename).await;
@@ -209,13 +231,15 @@ pub async fn delete(
         .await
         .map_err(|e| {
             tracing::error!("DB error: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Database error"})),
+            )
         })?;
 
     // Publish event
-    let event = blog_shared::events::EventEnvelope::new(blog_shared::events::MediaDeleted {
-        media_id: id,
-    });
+    let event =
+        blog_shared::events::EventEnvelope::new(blog_shared::events::MediaDeleted { media_id: id });
     let _ = state
         .nats
         .publish(
@@ -235,16 +259,21 @@ pub async fn list_by_user(
     let user_id = headers
         .get("x-user-id")
         .and_then(|v| v.to_str().ok())
-        .ok_or_else(|| (StatusCode::UNAUTHORIZED, Json(json!({"error": "Missing user ID"}))))?;
+        .ok_or_else(|| {
+            (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Missing user ID"})),
+            )
+        })?;
 
     let user_uuid: Uuid = user_id.parse().map_err(|_| {
-        (StatusCode::BAD_REQUEST, Json(json!({"error": "Invalid user ID"})))
+        (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "Invalid user ID"})),
+        )
     })?;
 
-    let is_admin = headers
-        .get("x-user-role")
-        .and_then(|v| v.to_str().ok())
-        == Some("admin");
+    let is_admin = headers.get("x-user-role").and_then(|v| v.to_str().ok()) == Some("admin");
     let list_all = is_admin && params.get("all").map(|v| v == "true").unwrap_or(false);
 
     if list_all {
@@ -260,17 +289,19 @@ pub async fn list_by_user(
 
         let media: Vec<Value> = rows
             .into_iter()
-            .map(|(id, user_id, filename, original_name, content_type, size, created_at)| {
-                json!({
-                    "id": id,
-                    "user_id": user_id,
-                    "filename": filename,
-                    "original_name": original_name,
-                    "content_type": content_type,
-                    "size": size,
-                    "created_at": created_at,
-                })
-            })
+            .map(
+                |(id, user_id, filename, original_name, content_type, size, created_at)| {
+                    json!({
+                        "id": id,
+                        "user_id": user_id,
+                        "filename": filename,
+                        "original_name": original_name,
+                        "content_type": content_type,
+                        "size": size,
+                        "created_at": created_at,
+                    })
+                },
+            )
             .collect();
 
         Ok(Json(json!({ "media": media })))
@@ -288,16 +319,18 @@ pub async fn list_by_user(
 
         let media: Vec<Value> = rows
             .into_iter()
-            .map(|(id, filename, original_name, content_type, size, created_at)| {
-                json!({
-                    "id": id,
-                    "filename": filename,
-                    "original_name": original_name,
-                    "content_type": content_type,
-                    "size": size,
-                    "created_at": created_at,
-                })
-            })
+            .map(
+                |(id, filename, original_name, content_type, size, created_at)| {
+                    json!({
+                        "id": id,
+                        "filename": filename,
+                        "original_name": original_name,
+                        "content_type": content_type,
+                        "size": size,
+                        "created_at": created_at,
+                    })
+                },
+            )
             .collect();
 
         Ok(Json(json!({ "media": media })))
@@ -421,7 +454,10 @@ mod tests {
     #[test]
     fn filename_strips_path_components() {
         assert_eq!(sanitize_filename("../../etc/passwd"), "passwd");
-        assert_eq!(sanitize_filename("C:\\Users\\evil\\payload.exe"), "payload.exe");
+        assert_eq!(
+            sanitize_filename("C:\\Users\\evil\\payload.exe"),
+            "payload.exe"
+        );
         assert_eq!(sanitize_filename("/tmp/secret.txt"), "secret.txt");
     }
 
@@ -461,7 +497,10 @@ mod tests {
     #[test]
     fn filename_preserves_quotes() {
         // Quotes are valid in filenames; handled at Content-Disposition level
-        assert_eq!(sanitize_filename("it's a \"test\".txt"), "it's a \"test\".txt");
+        assert_eq!(
+            sanitize_filename("it's a \"test\".txt"),
+            "it's a \"test\".txt"
+        );
     }
 
     // ---- sanitize_extension ----
@@ -496,10 +535,7 @@ mod tests {
     #[test]
     fn content_type_valid() {
         assert_eq!(sanitize_content_type("image/png"), "image/png");
-        assert_eq!(
-            sanitize_content_type("application/pdf"),
-            "application/pdf"
-        );
+        assert_eq!(sanitize_content_type("application/pdf"), "application/pdf");
         assert_eq!(
             sanitize_content_type("text/plain; charset=utf-8"),
             "text/plain; charset=utf-8"

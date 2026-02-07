@@ -6,7 +6,9 @@ use anyhow::{anyhow, Result};
 use tantivy::{
     collector::TopDocs,
     query::{BooleanQuery, Occur, PhrasePrefixQuery, Query, QueryParser},
-    schema::{Field, Schema, Value, TextFieldIndexing, TextOptions, IndexRecordOption, STRING, STORED},
+    schema::{
+        Field, IndexRecordOption, Schema, TextFieldIndexing, TextOptions, Value, STORED, STRING,
+    },
     tokenizer::{LowerCaser, SimpleTokenizer, TextAnalyzer},
     Index, IndexReader, IndexWriter, TantivyDocument, Term,
 };
@@ -128,7 +130,9 @@ impl SearchIndex {
         author_id: &str,
         status: &str,
     ) -> Result<()> {
-        let writer_lock = self.writer.as_ref()
+        let writer_lock = self
+            .writer
+            .as_ref()
             .ok_or_else(|| anyhow!("Cannot write: index opened in read-only mode"))?;
 
         let post_id_field = self.schema.get_field("post_id").unwrap();
@@ -159,7 +163,9 @@ impl SearchIndex {
     }
 
     pub async fn delete_post(&self, post_id: &str) -> Result<()> {
-        let writer_lock = self.writer.as_ref()
+        let writer_lock = self
+            .writer
+            .as_ref()
             .ok_or_else(|| anyhow!("Cannot write: index opened in read-only mode"))?;
 
         let post_id_field = self.schema.get_field("post_id").unwrap();
@@ -177,7 +183,8 @@ impl SearchIndex {
         let field_queries: Vec<(Occur, Box<dyn Query>)> = fields
             .iter()
             .map(|&field| {
-                let prefix_terms: Vec<(usize, Term)> = lower.iter()
+                let prefix_terms: Vec<(usize, Term)> = lower
+                    .iter()
                     .enumerate()
                     .map(|(i, t)| (i, Term::from_field_text(field, t)))
                     .collect();
@@ -189,7 +196,12 @@ impl SearchIndex {
         Box::new(BooleanQuery::new(field_queries))
     }
 
-    pub fn search(&self, query_str: &str, limit: usize, offset: usize) -> Result<Vec<serde_json::Value>> {
+    pub fn search(
+        &self,
+        query_str: &str,
+        limit: usize,
+        offset: usize,
+    ) -> Result<Vec<serde_json::Value>> {
         let title_field = self.schema.get_field("title").unwrap();
         let content_field = self.schema.get_field("content").unwrap();
         let tags_field = self.schema.get_field("tags").unwrap();

@@ -19,10 +19,14 @@ pub async fn proxy_handler(
     request: Request,
 ) -> Result<Response, StatusCode> {
     let path = request.uri().path().to_string();
-    let query = request.uri().query().map(|q| format!("?{q}")).unwrap_or_default();
+    let query = request
+        .uri()
+        .query()
+        .map(|q| format!("?{q}"))
+        .unwrap_or_default();
 
-    let (target_base, target_path) = route_to_service(&path, &state.config)
-        .ok_or(StatusCode::NOT_FOUND)?;
+    let (target_base, target_path) =
+        route_to_service(&path, &state.config).ok_or(StatusCode::NOT_FOUND)?;
 
     let url = format!("{target_base}{target_path}{query}");
     let method = request.method().clone();
@@ -38,8 +42,15 @@ pub async fn proxy_handler(
     // Forward safe headers. Identity headers (x-user-id, x-user-role,
     // x-username) are injected by the auth middleware after JWT verification
     // and must NOT come from the original inbound request.
-    let forward_headers = ["content-type", "authorization", "accept",
-        "x-user-id", "x-user-role", "x-username", "x-request-id"];
+    let forward_headers = [
+        "content-type",
+        "authorization",
+        "accept",
+        "x-user-id",
+        "x-user-role",
+        "x-username",
+        "x-request-id",
+    ];
     for name in &forward_headers {
         if let Some(value) = headers.get(*name) {
             proxy_req = proxy_req.header(*name, value.to_str().unwrap_or(""));
@@ -52,7 +63,8 @@ pub async fn proxy_handler(
 
     match proxy_req.send().await {
         Ok(resp) => {
-            let status = StatusCode::from_u16(resp.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
+            let status =
+                StatusCode::from_u16(resp.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
             let mut builder = Response::builder().status(status);
 
             for (key, value) in resp.headers() {

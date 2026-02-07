@@ -22,8 +22,12 @@ pub struct SearchQuery {
     pub limit: usize,
 }
 
-fn default_page() -> usize { 1 }
-fn default_limit() -> usize { 20 }
+fn default_page() -> usize {
+    1
+}
+fn default_limit() -> usize {
+    20
+}
 
 pub async fn health() -> Json<Value> {
     Json(json!({"status": "healthy", "service": "search-service"}))

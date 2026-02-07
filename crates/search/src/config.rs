@@ -16,7 +16,10 @@ pub struct Config {
 
 impl Config {
     pub fn from_env() -> Self {
-        let mode = match env::var("MODE").unwrap_or_else(|_| "query".to_string()).as_str() {
+        let mode = match env::var("MODE")
+            .unwrap_or_else(|_| "query".to_string())
+            .as_str()
+        {
             "indexer" => ServiceMode::Indexer,
             _ => ServiceMode::Query,
         };
@@ -26,10 +29,8 @@ impl Config {
                 .unwrap_or_else(|_| "3005".to_string())
                 .parse()
                 .expect("PORT must be a number"),
-            nats_url: env::var("NATS_URL")
-                .unwrap_or_else(|_| "nats://localhost:4222".to_string()),
-            index_path: env::var("INDEX_PATH")
-                .unwrap_or_else(|_| "./tantivy_index".to_string()),
+            nats_url: env::var("NATS_URL").unwrap_or_else(|_| "nats://localhost:4222".to_string()),
+            index_path: env::var("INDEX_PATH").unwrap_or_else(|_| "./tantivy_index".to_string()),
             mode,
         }
     }

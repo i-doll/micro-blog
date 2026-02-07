@@ -103,10 +103,7 @@ mod tests {
     use super::*;
     use axum::http::Request as HttpRequest;
 
-    fn mock_request(
-        peer: Option<SocketAddr>,
-        xff: Option<&str>,
-    ) -> Request {
+    fn mock_request(peer: Option<SocketAddr>, xff: Option<&str>) -> Request {
         let mut builder = HttpRequest::builder().uri("/test");
         if let Some(val) = xff {
             builder = builder.header("x-forwarded-for", val);
@@ -136,19 +133,13 @@ mod tests {
 
     #[test]
     fn no_proxies_ignores_xff() {
-        let req = mock_request(
-            Some(addr("192.168.1.50:12345")),
-            Some("10.0.0.1"),
-        );
+        let req = mock_request(Some(addr("192.168.1.50:12345")), Some("10.0.0.1"));
         assert_eq!(extract_client_ip(&req, &[]), "192.168.1.50");
     }
 
     #[test]
     fn no_proxies_spoofed_xff_ignored() {
-        let req = mock_request(
-            Some(addr("192.168.1.50:12345")),
-            Some("1.2.3.4, 5.6.7.8"),
-        );
+        let req = mock_request(Some(addr("192.168.1.50:12345")), Some("1.2.3.4, 5.6.7.8"));
         assert_eq!(extract_client_ip(&req, &[]), "192.168.1.50");
     }
 
@@ -163,30 +154,21 @@ mod tests {
     #[test]
     fn trusted_proxy_extracts_client_from_xff() {
         let trusted = vec![ip("10.0.0.1")];
-        let req = mock_request(
-            Some(addr("10.0.0.1:54321")),
-            Some("203.0.113.50"),
-        );
+        let req = mock_request(Some(addr("10.0.0.1:54321")), Some("203.0.113.50"));
         assert_eq!(extract_client_ip(&req, &trusted), "203.0.113.50");
     }
 
     #[test]
     fn trusted_proxy_chain_walks_right_to_left() {
         let trusted = vec![ip("10.0.0.1"), ip("10.0.0.2")];
-        let req = mock_request(
-            Some(addr("10.0.0.1:54321")),
-            Some("203.0.113.50, 10.0.0.2"),
-        );
+        let req = mock_request(Some(addr("10.0.0.1:54321")), Some("203.0.113.50, 10.0.0.2"));
         assert_eq!(extract_client_ip(&req, &trusted), "203.0.113.50");
     }
 
     #[test]
     fn untrusted_peer_ignores_xff_even_with_trusted_configured() {
         let trusted = vec![ip("10.0.0.1")];
-        let req = mock_request(
-            Some(addr("192.168.1.50:12345")),
-            Some("1.2.3.4"),
-        );
+        let req = mock_request(Some(addr("192.168.1.50:12345")), Some("1.2.3.4"));
         // Peer 192.168.1.50 is not trusted, so XFF is ignored.
         assert_eq!(extract_client_ip(&req, &trusted), "192.168.1.50");
     }
@@ -201,10 +183,7 @@ mod tests {
     #[test]
     fn trusted_proxy_all_xff_trusted_falls_back_to_peer() {
         let trusted = vec![ip("10.0.0.1"), ip("10.0.0.2")];
-        let req = mock_request(
-            Some(addr("10.0.0.1:54321")),
-            Some("10.0.0.2"),
-        );
+        let req = mock_request(Some(addr("10.0.0.1:54321")), Some("10.0.0.2"));
         assert_eq!(extract_client_ip(&req, &trusted), "10.0.0.1");
     }
 
@@ -229,10 +208,7 @@ mod tests {
     #[test]
     fn trusted_proxy_garbage_only_xff_falls_back_to_peer() {
         let trusted = vec![ip("10.0.0.1")];
-        let req = mock_request(
-            Some(addr("10.0.0.1:54321")),
-            Some("not-an-ip"),
-        );
+        let req = mock_request(Some(addr("10.0.0.1:54321")), Some("not-an-ip"));
         // Unparseable → break, use peer.
         assert_eq!(extract_client_ip(&req, &trusted), "10.0.0.1");
     }
@@ -263,10 +239,7 @@ mod tests {
         // the actual client IP. We walk right-to-left: the proxy-appended
         // (rightmost untrusted) IP is used, not the attacker-prepended one.
         let trusted = vec![ip("10.0.0.1")];
-        let req = mock_request(
-            Some(addr("10.0.0.1:54321")),
-            Some("9.9.9.9, 203.0.113.50"),
-        );
+        let req = mock_request(Some(addr("10.0.0.1:54321")), Some("9.9.9.9, 203.0.113.50"));
         assert_eq!(extract_client_ip(&req, &trusted), "203.0.113.50");
     }
 
@@ -294,10 +267,7 @@ mod tests {
     #[test]
     fn ipv6_trusted_proxy_with_xff() {
         let trusted = vec![ip("::1")];
-        let req = mock_request(
-            Some(addr("[::1]:12345")),
-            Some("2001:db8::1"),
-        );
+        let req = mock_request(Some(addr("[::1]:12345")), Some("2001:db8::1"));
         assert_eq!(extract_client_ip(&req, &trusted), "2001:db8::1");
     }
 }

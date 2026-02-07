@@ -71,7 +71,10 @@ async fn subscribe_user_deleted(
     storage_dir: String,
 ) -> anyhow::Result<()> {
     use async_nats::jetstream;
-    use blog_shared::{events::{EventEnvelope, UserDeleted}, nats_subjects::{USER_DELETED, STREAM_NAME, STREAM_SUBJECTS}};
+    use blog_shared::{
+        events::{EventEnvelope, UserDeleted},
+        nats_subjects::{STREAM_NAME, STREAM_SUBJECTS, USER_DELETED},
+    };
     use futures_util::StreamExt;
 
     let jetstream = jetstream::new(nats);
@@ -109,12 +112,11 @@ async fn subscribe_user_deleted(
                 let user_id = envelope.payload.user_id;
                 tracing::info!("Deleting media for user: {}", user_id);
 
-                let rows = sqlx::query_as::<_, (String,)>(
-                    "SELECT filename FROM media WHERE user_id = $1",
-                )
-                .bind(user_id)
-                .fetch_all(&pool)
-                .await;
+                let rows =
+                    sqlx::query_as::<_, (String,)>("SELECT filename FROM media WHERE user_id = $1")
+                        .bind(user_id)
+                        .fetch_all(&pool)
+                        .await;
 
                 if let Ok(files) = rows {
                     for (filename,) in files {

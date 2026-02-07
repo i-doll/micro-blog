@@ -30,8 +30,5 @@ impl HealthResponse {
 }
 
 pub async fn health_handler(service_name: &str) -> impl IntoResponse {
-    (
-        StatusCode::OK,
-        Json(HealthResponse::healthy(service_name)),
-    )
+    (StatusCode::OK, Json(HealthResponse::healthy(service_name)))
 }

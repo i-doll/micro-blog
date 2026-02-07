@@ -2,13 +2,13 @@ mod config;
 mod middleware;
 mod routes;
 
+use axum::http::{self, HeaderName, HeaderValue, Method};
 use axum::{
     middleware::from_fn,
     routing::{any, get},
     Router,
 };
 use std::time::Duration;
-use axum::http::{self, HeaderName, HeaderValue, Method};
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 

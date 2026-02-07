@@ -2,7 +2,9 @@ use anyhow::Result;
 use async_nats::jetstream::{self, consumer::PullConsumer};
 use blog_shared::{
     events::{EventEnvelope, PostCreated, PostDeleted, PostPublished, PostUpdated},
-    nats_subjects::{POST_CREATED, POST_DELETED, POST_PUBLISHED, POST_UPDATED, STREAM_NAME, STREAM_SUBJECTS},
+    nats_subjects::{
+        POST_CREATED, POST_DELETED, POST_PUBLISHED, POST_UPDATED, STREAM_NAME, STREAM_SUBJECTS,
+    },
 };
 
 use crate::index::SearchIndex;
@@ -30,19 +32,17 @@ pub async fn subscribe(nats_url: String, index: SearchIndex, fresh_index: bool) 
     }
 
     let consumer: PullConsumer = stream
-        .create_consumer(
-            jetstream::consumer::pull::Config {
-                durable_name: Some("search-indexer".to_string()),
-                deliver_policy: jetstream::consumer::DeliverPolicy::All,
-                filter_subjects: vec![
-                    POST_CREATED.to_string(),
-                    POST_UPDATED.to_string(),
-                    POST_PUBLISHED.to_string(),
-                    POST_DELETED.to_string(),
-                ],
-                ..Default::default()
-            },
-        )
+        .create_consumer(jetstream::consumer::pull::Config {
+            durable_name: Some("search-indexer".to_string()),
+            deliver_policy: jetstream::consumer::DeliverPolicy::All,
+            filter_subjects: vec![
+                POST_CREATED.to_string(),
+                POST_UPDATED.to_string(),
+                POST_PUBLISHED.to_string(),
+                POST_DELETED.to_string(),
+            ],
+            ..Default::default()
+        })
         .await?;
 
     tracing::info!("Search indexer subscribed to post events (durable consumer)");
@@ -122,6 +122,8 @@ async fn handle_post_published(_index: &SearchIndex, payload: &str) -> Result<()
 async fn handle_post_deleted(index: &SearchIndex, payload: &str) -> Result<()> {
     let envelope: EventEnvelope<PostDeleted> = serde_json::from_str(payload)?;
     tracing::info!("Removing post from index: {}", envelope.payload.post_id);
-    index.delete_post(&envelope.payload.post_id.to_string()).await?;
+    index
+        .delete_post(&envelope.payload.post_id.to_string())
+        .await?;
     Ok(())
 }
