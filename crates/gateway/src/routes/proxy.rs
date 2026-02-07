@@ -75,6 +75,10 @@ fn route_to_service(path: &str, config: &Config) -> Option<(String, String)> {
         &config.user_service_url
     } else if rest.starts_with("/posts") {
         &config.post_service_url
+    } else if rest.starts_with("/comments/posts/") {
+        // /api/comments/posts/:id/comments → comment-service at /posts/:id/comments
+        let inner = rest.strip_prefix("/comments").unwrap();
+        return Some((config.comment_service_url.clone(), inner.to_string()));
     } else if rest.starts_with("/comments") {
         &config.comment_service_url
     } else if rest.starts_with("/notifications") {
