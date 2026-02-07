@@ -788,7 +788,26 @@ textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border-light);
   color: var(--text-secondary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
+
+.notif-clear-btn {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.125rem 0.375rem;
+  border-radius: 3px;
+  transition: background 0.15s;
+}
+.notif-clear-btn:hover { background: var(--accent-muted); }
 
 .notif-item {
   padding: 0.75rem 1rem;
@@ -1104,7 +1123,10 @@ textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
             <span id="notif-count" class="notif-badge hidden">0</span>
           </button>
           <div id="notif-panel" class="notif-panel">
-            <div class="notif-panel__header">Notifications</div>
+            <div class="notif-panel__header">
+              <span>Notifications</span>
+              <button id="notif-clear-btn" class="notif-clear-btn hidden" onclick="markAllNotificationsRead(event)">Mark all read</button>
+            </div>
             <div id="notif-list"></div>
           </div>
         </div>
@@ -1899,20 +1921,23 @@ async function loadNotifications() {
   if (!state.token) return;
   try {
     const data = await apiFetch('/api/notifications');
-    const notifications = data.notifications || [];
-    const unread = notifications.filter(n => !n.read).length;
+    const all = data.notifications || [];
+    const notifications = all.filter(n => !n.read);
 
     const badge = document.getElementById('notif-count');
-    if (unread > 0) {
-      badge.textContent = unread > 99 ? '99+' : unread;
+    const clearBtn = document.getElementById('notif-clear-btn');
+    if (notifications.length > 0) {
+      badge.textContent = notifications.length > 99 ? '99+' : notifications.length;
       badge.classList.remove('hidden');
+      clearBtn.classList.remove('hidden');
     } else {
       badge.classList.add('hidden');
+      clearBtn.classList.add('hidden');
     }
 
     const list = document.getElementById('notif-list');
     if (notifications.length === 0) {
-      list.innerHTML = '<div class="notif-empty">No notifications yet</div>';
+      list.innerHTML = '<div class="notif-empty">No new notifications</div>';
       return;
     }
 
@@ -1937,7 +1962,7 @@ async function loadNotifications() {
       }
       const onclick = postId ? ` onclick="navigate('post','${esc(postId)}')"` : '';
       return `
-      <div class="notif-item ${n.read ? '' : 'unread'}"${onclick}>
+      <div class="notif-item unread"${onclick}>
         <div class="notif-item__message">${esc(message)}</div>
         <div class="notif-item__time">${timeAgo(n.created_at)}</div>
       </div>`;
@@ -1952,6 +1977,16 @@ function toggleNotifications() {
   panel.classList.toggle('open');
   if (panel.classList.contains('open')) {
     loadNotifications();
+  }
+}
+
+async function markAllNotificationsRead(e) {
+  e.stopPropagation();
+  try {
+    await apiFetch('/api/notifications/read-all', { method: 'PUT' });
+    await loadNotifications();
+  } catch(err) {
+    // ignore
   }
 }
 
