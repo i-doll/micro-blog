@@ -13,6 +13,15 @@ export async function commentRoutes(app: FastifyInstance) {
     return reply.status(201).send(comment);
   });
 
+  // List all comments (global, with optional post_ids filter)
+  app.get('/comments', async (request, reply) => {
+    const query = paginationSchema.parse(request.query);
+    const { post_ids } = request.query as { post_ids?: string };
+    const postIdArray = post_ids ? post_ids.split(',').filter(Boolean) : undefined;
+    const result = await commentService.listComments(query.page, query.limit, postIdArray);
+    return reply.send(result);
+  });
+
   // Create comment on a post (nested route)
   app.post('/posts/:postId/comments', async (request, reply) => {
     const { postId } = request.params as { postId: string };

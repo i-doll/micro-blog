@@ -593,6 +593,8 @@ textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
   font-size: 0.9375rem;
   line-height: 1.6;
   color: var(--text-secondary);
+  white-space: pre-line;
+  word-break: break-word;
 }
 
 .comment__actions {
@@ -1032,70 +1034,203 @@ textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
 .admin-tabs {
   display: flex;
   gap: 0;
-  border-bottom: 2px solid var(--rule-color);
+  border-bottom: 1px solid var(--border);
   margin-bottom: 1.5rem;
 }
 
 .admin-tab {
   font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  font-weight: 500;
+  font-size: 0.75rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-secondary);
-  padding: 0.6rem 1.25rem;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding: 0.75rem 1.25rem 0.625rem;
   cursor: pointer;
   border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  transition: color 0.2s, border-color 0.2s;
+  margin-bottom: -1px;
+  transition: color 0.25s var(--ease-out), border-color 0.25s var(--ease-out);
+  position: relative;
 }
 .admin-tab:hover { color: var(--text-primary); }
-.admin-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.admin-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* Scrollable table wrapper */
+.admin-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 -0.25rem;
+  padding: 0 0.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.admin-table-wrap::-webkit-scrollbar { height: 4px; }
+.admin-table-wrap::-webkit-scrollbar-track { background: transparent; }
+.admin-table-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
 .admin-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-family: var(--font-sans);
   font-size: 0.8125rem;
+  table-layout: fixed;
+  min-width: 640px;
 }
 
 .admin-table th {
   text-align: left;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.07em;
   color: var(--text-muted);
-  padding: 0.5rem 0.75rem;
-  border-bottom: 2px solid var(--rule-color);
-  font-size: 0.6875rem;
+  padding: 0 0.625rem 0.5rem;
+  border-bottom: 1px solid var(--border-heavy);
+  font-size: 0.625rem;
   white-space: nowrap;
 }
 
 .admin-table td {
-  padding: 0.625rem 0.75rem;
-  border-bottom: 1px solid var(--rule-light);
+  padding: 0.5rem 0.625rem;
+  border-bottom: 1px solid var(--border-light);
   color: var(--text-primary);
   vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background 0.15s;
 }
 
-.admin-table tr:hover td { background: var(--bg-card-hover); }
+.admin-table tbody tr:hover > td { background: var(--accent-muted); }
 
-.admin-table .actions { white-space: nowrap; }
-.admin-table .actions button { margin-right: 0.25rem; }
+.admin-table .actions {
+  white-space: nowrap;
+  overflow: visible;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.admin-table .actions button { flex-shrink: 0; }
+.admin-table .actions select { flex-shrink: 0; }
+
+/* Column sizing — users */
+.admin-table .col-user     { width: 20%; }
+.admin-table .col-email    { width: 30%; }
+.admin-table .col-role     { width: 8%; }
+.admin-table .col-date     { width: 14%; }
+.admin-table .col-actions  { width: 28%; overflow: visible; }
+
+/* Column sizing — posts */
+.admin-table .col-title    { width: 30%; }
+.admin-table .col-author   { width: 16%; }
+.admin-table .col-status   { width: 10%; }
+
+/* Column sizing — comments */
+.admin-table .col-content  { width: 34%; }
+.admin-table .col-post     { width: 18%; }
+
+/* Allow wrapping in content cells */
+.admin-table td.cell-wrap {
+  white-space: pre-line;
+  overflow: visible;
+  text-overflow: unset;
+  line-height: 1.45;
+  max-height: 4.35em;
+  overflow-y: hidden;
+}
+
+/* Segmented role switcher */
+.role-switcher {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.role-switcher button {
+  font-family: var(--font-sans);
+  font-size: 0.5625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.4rem;
+  border: none;
+  background: var(--bg-input);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1.3;
+  border-right: 1px solid var(--border);
+}
+.role-switcher button:last-child { border-right: none; }
+.role-switcher button:hover:not(.role-active) { color: var(--text-primary); background: var(--bg-secondary); }
+.role-switcher button.role-active { pointer-events: none; }
+.role-switcher button.role-active[data-role="user"] { background: var(--tag-bg); color: var(--tag-text); }
+.role-switcher button.role-active[data-role="writer"] { background: var(--warning); color: #000; }
+.role-switcher button.role-active[data-role="admin"] { background: var(--accent); color: var(--text-inverse); }
+
+/* Compact delete button (icon-style) */
+.btn--delete-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.btn--delete-icon:hover { color: var(--error); border-color: var(--error); background: rgba(192,57,43,0.08); }
+.btn--delete-icon svg { width: 14px; height: 14px; }
+
+/* Reply row */
+.admin-reply-cell {
+  padding: 0.625rem 0.75rem 0.75rem !important;
+  background: var(--bg-secondary) !important;
+  border-bottom: 1px solid var(--border) !important;
+  white-space: normal !important;
+}
+.admin-reply-cell textarea {
+  width: 100%;
+  min-height: 56px;
+  margin-bottom: 0.4rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  resize: vertical;
+  line-height: 1.5;
+  transition: border-color 0.2s;
+}
+.admin-reply-cell textarea:focus { outline: none; border-color: var(--accent); }
+.admin-reply-actions { display: flex; gap: 0.375rem; justify-content: flex-end; }
 
 .badge {
   font-family: var(--font-sans);
-  font-size: 0.625rem;
-  font-weight: 600;
+  font-size: 0.5625rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 0.15rem 0.4rem;
+  letter-spacing: 0.06em;
+  padding: 0.125rem 0.375rem;
   border-radius: 2px;
   display: inline-block;
+  line-height: 1.4;
 }
 
 .badge--admin { background: var(--accent); color: var(--text-inverse); }
 .badge--user { background: var(--tag-bg); color: var(--tag-text); }
+.badge--writer { background: var(--warning); color: #000; }
 .badge--published { background: var(--success); color: white; }
 .badge--draft { background: var(--warning); color: #000; }
 .badge--archived { background: var(--text-muted); color: white; }
@@ -1103,6 +1238,18 @@ textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
 
 .admin-panel-tab { display: none; }
 .admin-panel-tab.active { display: block; }
+
+/* Admin-specific button sizing */
+.admin-table .btn--sm {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.03em;
+}
+
+@media (max-width: 768px) {
+  .admin-table { min-width: 580px; }
+  .admin-tab { padding: 0.6rem 0.75rem; font-size: 0.6875rem; }
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>
 </head>
@@ -1139,7 +1286,7 @@ textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
           <button class="btn btn--primary" onclick="navigate('register')">Join</button>
         </div>
         <div id="user-menu" class="hidden" style="display:flex;align-items:center;gap:0.5rem">
-          <button class="btn btn--primary btn--sm" onclick="navigate('compose')">Write</button>
+          <button class="btn btn--primary btn--sm" id="write-btn" onclick="navigate('compose')">Write</button>
           <button class="btn--icon btn--ghost" onclick="navigate('profile')" title="Profile" id="user-avatar-btn" style="font-family:var(--font-display);font-weight:700;font-size:0.875rem;background:var(--accent);color:var(--text-inverse);width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center"></button>
         </div>
       </div>
@@ -1336,16 +1483,21 @@ textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
       <p class="page-subtitle">Manage users and content</p>
       <hr class="section-rule">
       <div class="admin-tabs">
-        <div class="admin-tab active" onclick="switchAdminTab('users')">Users</div>
-        <div class="admin-tab" onclick="switchAdminTab('posts')">Posts</div>
+        <div class="admin-tab" data-tab="users" onclick="switchAdminTab('users')">Users</div>
+        <div class="admin-tab" data-tab="posts" onclick="switchAdminTab('posts')">Posts</div>
+        <div class="admin-tab" data-tab="comments" onclick="switchAdminTab('comments')">Comments</div>
       </div>
-      <div id="admin-users" class="admin-panel-tab active">
+      <div id="admin-users" class="admin-panel-tab">
         <div id="admin-users-table"></div>
         <div id="admin-users-pagination" class="pagination"></div>
       </div>
       <div id="admin-posts" class="admin-panel-tab">
         <div id="admin-posts-table"></div>
         <div id="admin-posts-pagination" class="pagination"></div>
+      </div>
+      <div id="admin-comments" class="admin-panel-tab">
+        <div id="admin-comments-table"></div>
+        <div id="admin-comments-pagination" class="pagination"></div>
       </div>
     </div>
   </div>
@@ -1486,6 +1638,7 @@ function navigate(view, param, noHash) {
     case 'register': loadCaptcha('register'); break;
     case 'compose':
       if (!state.token) { navigate('login'); return; }
+      if (state.user.role !== 'writer' && state.user.role !== 'admin') { navigate('home'); return; }
       document.getElementById('compose-title').value = '';
       document.getElementById('compose-content').value = '';
       document.getElementById('compose-tags').value = '';
@@ -1493,6 +1646,7 @@ function navigate(view, param, noHash) {
       break;
     case 'edit':
       if (!state.token) { navigate('login'); return; }
+      if (state.user.role !== 'writer' && state.user.role !== 'admin') { navigate('home'); return; }
       loadPostForEdit(param);
       break;
     case 'profile':
@@ -1500,8 +1654,12 @@ function navigate(view, param, noHash) {
       loadProfile();
       break;
     case 'admin':
-      if (!state.token || !state.user || state.user.role !== 'admin') { navigate('home'); return; }
-      loadAdminUsers();
+      if (!state.token || !state.user || (state.user.role !== 'writer' && state.user.role !== 'admin')) { navigate('home'); return; }
+      if (state.user.role === 'admin') {
+        switchAdminTab('users');
+      } else {
+        switchAdminTab('comments');
+      }
       break;
     case 'health': loadHealth(); break;
   }
@@ -1533,7 +1691,9 @@ function updateAuthUI() {
     navProfile.classList.remove('hidden');
     document.getElementById('user-avatar-btn').textContent = state.user.username[0].toUpperCase();
     document.getElementById('comment-form-area').classList.remove('hidden');
-    if (state.user.role === 'admin') {
+    const canWrite = state.user.role === 'writer' || state.user.role === 'admin';
+    document.getElementById('write-btn').style.display = canWrite ? '' : 'none';
+    if (canWrite) {
       navAdmin.classList.remove('hidden');
     } else {
       navAdmin.classList.add('hidden');
@@ -1733,7 +1893,7 @@ async function loadPost(id) {
     await resolveUsernames([post.author_id]);
     const date = new Date(post.published_at || post.created_at).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
     const tags = (post.tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join('');
-    const isOwner = state.user && (state.user.id === post.author_id || state.user.role === 'admin');
+    const isOwner = state.user && ((state.user.role === 'writer' && state.user.id === post.author_id) || state.user.role === 'admin');
 
     header.innerHTML = `
       <h1 class="post-header__title">${esc(post.title)}</h1>
@@ -2342,18 +2502,30 @@ function toast(message, type = 'info') {
 
 // ===== ADMIN PANEL =====
 function switchAdminTab(tab) {
+  const tabMap = { users: 'admin-users', posts: 'admin-posts', comments: 'admin-comments' };
+  const isWriter = state.user && state.user.role === 'writer';
+
   document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.admin-panel-tab').forEach(t => t.classList.remove('active'));
 
-  if (tab === 'users') {
-    document.querySelector('.admin-tab:nth-child(1)').classList.add('active');
-    document.getElementById('admin-users').classList.add('active');
-    loadAdminUsers();
-  } else {
-    document.querySelector('.admin-tab:nth-child(2)').classList.add('active');
-    document.getElementById('admin-posts').classList.add('active');
-    loadAdminPosts();
-  }
+  // Hide Users/Posts tabs for writers
+  document.querySelectorAll('.admin-tab').forEach(t => {
+    const tabName = t.getAttribute('data-tab');
+    if (isWriter && (tabName === 'users' || tabName === 'posts')) {
+      t.style.display = 'none';
+    } else {
+      t.style.display = '';
+    }
+  });
+
+  const tabEl = document.querySelector(`.admin-tab[data-tab="${tab}"]`);
+  if (tabEl) tabEl.classList.add('active');
+  const panelEl = document.getElementById(tabMap[tab]);
+  if (panelEl) panelEl.classList.add('active');
+
+  if (tab === 'users') loadAdminUsers();
+  else if (tab === 'posts') loadAdminPosts();
+  else if (tab === 'comments') loadAdminComments();
 }
 
 async function loadAdminUsers(page = 1) {
@@ -2372,7 +2544,15 @@ async function loadAdminUsers(page = 1) {
     }
 
     container.innerHTML = `
+      <div class="admin-table-wrap">
       <table class="admin-table">
+        <colgroup>
+          <col class="col-user">
+          <col class="col-email">
+          <col class="col-role">
+          <col class="col-date">
+          <col class="col-actions">
+        </colgroup>
         <thead>
           <tr>
             <th>Username</th>
@@ -2388,28 +2568,34 @@ async function loadAdminUsers(page = 1) {
             const date = new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
             const roleBadge = u.role === 'admin'
               ? '<span class="badge badge--admin">admin</span>'
+              : u.role === 'writer'
+              ? '<span class="badge badge--writer">writer</span>'
               : '<span class="badge badge--user">user</span>';
 
             let actions;
             if (isSelf) {
               actions = '<span class="badge badge--you">You</span>';
             } else {
-              const roleBtn = u.role === 'admin'
-                ? `<button class="btn btn--secondary btn--sm" onclick="toggleUserRole('${u.id}','user')">Demote</button>`
-                : `<button class="btn btn--secondary btn--sm" onclick="toggleUserRole('${u.id}','admin')">Promote</button>`;
-              actions = `${roleBtn} <button class="btn btn--danger btn--sm" onclick="adminDeleteUser('${u.id}')">Delete</button>`;
+              const roleSwitcher = `<div class="role-switcher">
+                <button data-role="user" class="${u.role==='user'?'role-active':''}" onclick="toggleUserRole('${u.id}','user')">U</button>
+                <button data-role="writer" class="${u.role==='writer'?'role-active':''}" onclick="toggleUserRole('${u.id}','writer')">W</button>
+                <button data-role="admin" class="${u.role==='admin'?'role-active':''}" onclick="toggleUserRole('${u.id}','admin')">A</button>
+              </div>`;
+              const deleteBtn = `<button class="btn--delete-icon" onclick="adminDeleteUser('${u.id}')" title="Delete user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
+              actions = `${roleSwitcher} ${deleteBtn}`;
             }
 
             return `<tr>
-              <td>${esc(u.username)}</td>
-              <td>${esc(u.email)}</td>
+              <td title="${esc(u.username)}">${esc(u.username)}</td>
+              <td title="${esc(u.email)}">${esc(u.email)}</td>
               <td>${roleBadge}</td>
               <td>${date}</td>
               <td class="actions">${actions}</td>
             </tr>`;
           }).join('')}
         </tbody>
-      </table>`;
+      </table>
+      </div>`;
 
     const total = data.total || users.length;
     const totalPages = Math.ceil(total / 20);
@@ -2469,7 +2655,15 @@ async function loadAdminPosts(page = 1) {
     await resolveUsernames(posts.map(p => p.author_id));
 
     container.innerHTML = `
+      <div class="admin-table-wrap">
       <table class="admin-table">
+        <colgroup>
+          <col class="col-title">
+          <col class="col-author">
+          <col class="col-status">
+          <col class="col-date">
+          <col class="col-actions">
+        </colgroup>
         <thead>
           <tr>
             <th>Title</th>
@@ -2494,19 +2688,20 @@ async function loadAdminPosts(page = 1) {
             }
 
             return `<tr>
-              <td><a href="#" onclick="navigate('post','${p.id}');return false" style="color:var(--text-primary);font-weight:500">${esc(p.title)}</a></td>
+              <td title="${esc(p.title)}"><a href="#" onclick="navigate('post','${p.id}');return false" style="color:var(--text-primary);font-weight:500">${esc(p.title)}</a></td>
               <td>${esc(getUsername(p.author_id))}</td>
               <td>${statusBadge}</td>
               <td>${date}</td>
               <td class="actions">
                 ${statusActions}
                 <button class="btn btn--secondary btn--sm" onclick="navigate('edit','${p.id}')">Edit</button>
-                <button class="btn btn--danger btn--sm" onclick="adminDeletePost('${p.id}')">Delete</button>
+                <button class="btn--delete-icon" onclick="adminDeletePost('${p.id}')" title="Delete post"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
               </td>
             </tr>`;
           }).join('')}
         </tbody>
-      </table>`;
+      </table>
+      </div>`;
 
     const total = data.total || posts.length;
     const totalPages = Math.ceil(total / 20);
@@ -2556,6 +2751,165 @@ async function adminArchivePost(postId) {
     });
     toast('Post archived', 'info');
     loadAdminPosts();
+  } catch(err) {
+    toast(err.message, 'error');
+  }
+}
+
+// ===== POST TITLE RESOLUTION =====
+const postTitleCache = {};
+
+async function resolvePostTitles(postIds) {
+  const unique = [...new Set(postIds.filter(Boolean))];
+  const missing = unique.filter(id => !(id in postTitleCache));
+  await Promise.all(missing.map(async id => {
+    try {
+      const p = await apiFetch(`/api/posts/${id}`);
+      postTitleCache[id] = { title: p.title, slug: p.slug };
+    } catch(e) { postTitleCache[id] = null; }
+  }));
+  return postTitleCache;
+}
+
+function getPostTitle(id) {
+  const entry = postTitleCache[id];
+  return entry ? entry.title : 'Unknown Post';
+}
+
+// ===== ADMIN COMMENTS =====
+async function loadAdminComments(page = 1) {
+  const container = document.getElementById('admin-comments-table');
+  const pagination = document.getElementById('admin-comments-pagination');
+  container.innerHTML = '<div class="skeleton skeleton--text"></div>';
+
+  try {
+    let comments = [];
+    let total = 0;
+    const isWriter = state.user.role === 'writer';
+
+    if (isWriter) {
+      // Fetch writer's own posts, then comments on those posts
+      const postsData = await apiFetch(`/api/posts?author_id=${state.user.id}&limit=100`);
+      const postIds = (postsData.posts || []).map(p => p.id);
+      if (postIds.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state__text">No comments on your posts yet.</div></div>';
+        pagination.innerHTML = '';
+        return;
+      }
+      const data = await apiFetch(`/api/comments?post_ids=${postIds.join(',')}&page=${page}&limit=20`);
+      comments = data.comments || [];
+      total = data.total || 0;
+    } else {
+      // Admin: all comments
+      const data = await apiFetch(`/api/comments?page=${page}&limit=20`);
+      comments = data.comments || [];
+      total = data.total || 0;
+    }
+
+    if (comments.length === 0) {
+      container.innerHTML = '<div class="empty-state"><div class="empty-state__text">No comments found.</div></div>';
+      pagination.innerHTML = '';
+      return;
+    }
+
+    await resolveUsernames(comments.map(c => c.author_id));
+    await resolvePostTitles(comments.map(c => c.post_id));
+
+    const isAdmin = state.user.role === 'admin';
+
+    container.innerHTML = `
+      <div class="admin-table-wrap">
+      <table class="admin-table">
+        <colgroup>
+          <col class="col-content">
+          <col class="col-author">
+          <col class="col-post">
+          <col class="col-date">
+          <col class="col-actions">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Content</th>
+            <th>Author</th>
+            <th>Post</th>
+            <th>Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${comments.map(c => {
+            const truncated = c.content.length > 200 ? c.content.slice(0, 200) + '...' : c.content;
+            const date = timeAgo(c.created_at);
+            const postTitle = getPostTitle(c.post_id);
+            return `<tr>
+              <td class="cell-wrap" title="${esc(c.content)}">${esc(truncated)}</td>
+              <td>${esc(getUsername(c.author_id))}</td>
+              <td title="${esc(postTitle)}"><a href="#" onclick="navigate('post','${c.post_id}');return false" style="color:var(--accent);font-weight:500">${esc(postTitle)}</a></td>
+              <td>${date}</td>
+              <td class="actions">
+                <button class="btn btn--secondary btn--sm" onclick="toggleCommentReply('${c.id}','${c.post_id}')">Reply</button>
+                ${isAdmin ? `<button class="btn--delete-icon" onclick="adminDeleteComment('${c.id}')" title="Delete comment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>` : ''}
+              </td>
+            </tr>
+            <tr id="reply-row-${c.id}" style="display:none">
+              <td colspan="5" class="admin-reply-cell">
+                <textarea id="reply-text-${c.id}" placeholder="Write a reply..."></textarea>
+                <div class="admin-reply-actions">
+                  <button class="btn btn--secondary btn--sm" onclick="toggleCommentReply('${c.id}','${c.post_id}')">Cancel</button>
+                  <button class="btn btn--primary btn--sm" onclick="submitCommentReply('${c.id}','${c.post_id}')">Send Reply</button>
+                </div>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+      </div>`;
+
+    const totalPages = Math.ceil(total / 20);
+    if (totalPages > 1) {
+      pagination.innerHTML = `
+        <button ${page <= 1 ? 'disabled' : ''} onclick="loadAdminComments(${page - 1})">&larr; Prev</button>
+        <span>Page ${page} of ${totalPages}</span>
+        <button ${page >= totalPages ? 'disabled' : ''} onclick="loadAdminComments(${page + 1})">Next &rarr;</button>`;
+    } else {
+      pagination.innerHTML = '';
+    }
+  } catch(err) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state__text">${esc(err.message)}</div></div>`;
+    pagination.innerHTML = '';
+  }
+}
+
+function toggleCommentReply(commentId, postId) {
+  const row = document.getElementById(`reply-row-${commentId}`);
+  if (row) {
+    row.style.display = row.style.display === 'none' ? '' : 'none';
+  }
+}
+
+async function submitCommentReply(commentId, postId) {
+  const textarea = document.getElementById(`reply-text-${commentId}`);
+  const content = textarea.value.trim();
+  if (!content) { toast('Reply cannot be empty', 'error'); return; }
+
+  try {
+    await apiFetch('/api/comments', {
+      method: 'POST',
+      body: JSON.stringify({ post_id: postId, content, parent_id: commentId }),
+    });
+    toast('Reply posted', 'success');
+    loadAdminComments();
+  } catch(err) {
+    toast(err.message, 'error');
+  }
+}
+
+async function adminDeleteComment(commentId) {
+  if (!confirm('Are you sure you want to delete this comment?')) return;
+  try {
+    await apiFetch(`/api/comments/${commentId}`, { method: 'DELETE' });
+    toast('Comment deleted', 'info');
+    loadAdminComments();
   } catch(err) {
     toast(err.message, 'error');
   }

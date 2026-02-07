@@ -1,4 +1,4 @@
-import { eq, desc, and, sql } from 'drizzle-orm';
+import { eq, desc, and, sql, inArray } from 'drizzle-orm';
 import { db, schema } from '../db/index.js';
 import { getJetStream } from './nats.js';
 import {
@@ -60,6 +60,30 @@ export async function getCommentsByPost(postId: string, page: number, limit: num
     db.select({ count: sql<number>`count(*)::int` })
       .from(schema.comments)
       .where(eq(schema.comments.post_id, postId)),
+  ]);
+
+  return {
+    comments: commentsResult,
+    total: countResult[0].count,
+    page,
+    limit,
+  };
+}
+
+export async function listComments(page: number, limit: number, postIds?: string[]) {
+  const offset = (page - 1) * limit;
+  const where = postIds?.length ? inArray(schema.comments.post_id, postIds) : undefined;
+
+  const [commentsResult, countResult] = await Promise.all([
+    db.select()
+      .from(schema.comments)
+      .where(where)
+      .orderBy(desc(schema.comments.created_at))
+      .limit(limit)
+      .offset(offset),
+    db.select({ count: sql<number>`count(*)::int` })
+      .from(schema.comments)
+      .where(where),
   ]);
 
   return {

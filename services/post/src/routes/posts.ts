@@ -7,6 +7,11 @@ export async function postRoutes(app: FastifyInstance) {
     const authorId = request.headers[USER_ID_HEADER] as string;
     if (!authorId) return reply.status(401).send({ error: 'Missing user ID' });
 
+    const userRole = request.headers[USER_ROLE_HEADER] as string | undefined;
+    if (userRole !== 'writer' && userRole !== 'admin') {
+      return reply.status(403).send({ error: 'Writer or admin role required to create posts' });
+    }
+
     const body = createPostSchema.parse(request.body);
     const post = await postService.createPost(authorId, body);
     return reply.status(201).send(post);
@@ -16,7 +21,9 @@ export async function postRoutes(app: FastifyInstance) {
     const query = paginationSchema.parse(request.query);
     const { status, author_id } = request.query as { status?: string; author_id?: string };
     const userRole = request.headers[USER_ROLE_HEADER] as string | undefined;
-    const allStatuses = userRole === 'admin' && !status;
+    const userId = request.headers[USER_ID_HEADER] as string | undefined;
+    const writerOwnPosts = userRole === 'writer' && author_id && author_id === userId;
+    const allStatuses = ((userRole === 'admin' && !status) || writerOwnPosts) as boolean;
     const result = await postService.listPosts(query.page, query.limit, status, author_id, allStatuses);
     return reply.send(result);
   });

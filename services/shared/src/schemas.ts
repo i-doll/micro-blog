@@ -23,7 +23,7 @@ export const updateUserSchema = z.object({
 });
 
 export const updateRoleSchema = z.object({
-  role: z.enum(['user', 'admin']),
+  role: z.enum(['user', 'writer', 'admin']),
 });
 
 // Post schemas

@@ -157,6 +157,8 @@ export async function listPosts(page: number, limit: number, status?: string, au
 export async function updatePost(id: string, authorId: string, data: {
   title?: string; content?: string; tags?: string[]; status?: string;
 }, userRole?: string) {
+  if (userRole !== 'writer' && userRole !== 'admin') throw new ForbiddenError('Writer or admin role required');
+
   const existing = await db.query.posts.findFirst({
     where: (posts, { eq }) => eq(posts.id, id),
   });
@@ -211,6 +213,8 @@ export async function updatePost(id: string, authorId: string, data: {
 }
 
 export async function deletePost(id: string, authorId: string, userRole?: string) {
+  if (userRole !== 'writer' && userRole !== 'admin') throw new ForbiddenError('Writer or admin role required');
+
   const existing = await db.query.posts.findFirst({
     where: (posts, { eq }) => eq(posts.id, id),
   });
