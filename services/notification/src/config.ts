@@ -1,6 +1,15 @@
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    console.error(`FATAL: Required environment variable ${name} is not set.`);
+    process.exit(1);
+  }
+  return value;
+}
+
 export const config = {
   port: parseInt(process.env.PORT || '3004', 10),
-  databaseUrl: process.env.DATABASE_URL || 'postgresql://notification_service:password@localhost:5432/blog_notifications',
+  databaseUrl: requireEnv('DATABASE_URL'),
   natsUrl: process.env.NATS_URL || 'nats://localhost:4222',
   logLevel: process.env.LOG_LEVEL || 'info',
 };

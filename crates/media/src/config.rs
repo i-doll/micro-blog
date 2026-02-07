@@ -17,7 +17,7 @@ impl Config {
                 .parse()
                 .expect("PORT must be a number"),
             database_url: env::var("DATABASE_URL")
-                .unwrap_or_else(|_| "postgresql://media_service:password@localhost:5432/blog_media".to_string()),
+                .expect("FATAL: Required environment variable DATABASE_URL is not set"),
             nats_url: env::var("NATS_URL")
                 .unwrap_or_else(|_| "nats://localhost:4222".to_string()),
             upload_dir: env::var("UPLOAD_DIR")

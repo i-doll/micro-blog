@@ -5,7 +5,7 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -40,9 +40,9 @@ services:
       - "3001:3001"
     environment:
       PORT: "3001"
-      DATABASE_URL: "postgresql://user_service:password@postgres:5432/blog_users"
+      DATABASE_URL: "postgresql://user_service:${POSTGRES_PASSWORD}@postgres:5432/blog_users"
       NATS_URL: "nats://nats:4222"
-      JWT_SECRET: "dev-secret-change-in-production"
+      JWT_SECRET: ${JWT_SECRET}
       LOG_LEVEL: "info"
     depends_on:
       postgres:
@@ -58,7 +58,7 @@ services:
       - "3002:3002"
     environment:
       PORT: "3002"
-      DATABASE_URL: "postgresql://post_service:password@postgres:5432/blog_posts"
+      DATABASE_URL: "postgresql://post_service:${POSTGRES_PASSWORD}@postgres:5432/blog_posts"
       NATS_URL: "nats://nats:4222"
       LOG_LEVEL: "info"
     depends_on:
@@ -75,7 +75,7 @@ services:
       - "3003:3003"
     environment:
       PORT: "3003"
-      DATABASE_URL: "postgresql://comment_service:password@postgres:5432/blog_comments"
+      DATABASE_URL: "postgresql://comment_service:${POSTGRES_PASSWORD}@postgres:5432/blog_comments"
       NATS_URL: "nats://nats:4222"
       LOG_LEVEL: "info"
     depends_on:
@@ -92,7 +92,7 @@ services:
       - "3004:3004"
     environment:
       PORT: "3004"
-      DATABASE_URL: "postgresql://notification_service:password@postgres:5432/blog_notifications"
+      DATABASE_URL: "postgresql://notification_service:${POSTGRES_PASSWORD}@postgres:5432/blog_notifications"
       NATS_URL: "nats://nats:4222"
       LOG_LEVEL: "info"
     depends_on:
@@ -143,7 +143,7 @@ services:
       - "3006:3006"
     environment:
       PORT: "3006"
-      DATABASE_URL: "postgresql://media_service:password@postgres:5432/blog_media"
+      DATABASE_URL: "postgresql://media_service:${POSTGRES_PASSWORD}@postgres:5432/blog_media"
       NATS_URL: "nats://nats:4222"
       UPLOAD_DIR: "/data/uploads"
     volumes:
@@ -162,7 +162,7 @@ services:
       - "3000:3000"
     environment:
       PORT: "3000"
-      JWT_SECRET: "dev-secret-change-in-production"
+      JWT_SECRET: ${JWT_SECRET}
       USER_SERVICE_URL: "http://user-service:3001"
       POST_SERVICE_URL: "http://post-service:3002"
       COMMENT_SERVICE_URL: "http://comment-service:3003"

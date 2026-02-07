@@ -20,7 +20,7 @@ impl Config {
                 .parse()
                 .expect("PORT must be a number"),
             jwt_secret: env::var("JWT_SECRET")
-                .unwrap_or_else(|_| "dev-secret-change-in-production".to_string()),
+                .expect("FATAL: Required environment variable JWT_SECRET is not set"),
             user_service_url: env::var("USER_SERVICE_URL")
                 .unwrap_or_else(|_| "http://localhost:3001".to_string()),
             post_service_url: env::var("POST_SERVICE_URL")
