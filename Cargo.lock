@@ -209,6 +209,7 @@ dependencies = [
  "axum",
  "blog-shared",
  "governor",
+ "http-body-util",
  "hyper",
  "jsonwebtoken",
  "reqwest",

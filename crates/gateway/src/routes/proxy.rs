@@ -35,7 +35,9 @@ pub async fn proxy_handler(
 
     let mut proxy_req = state.client.request(method, &url);
 
-    // Only forward specific safe headers
+    // Forward safe headers. Identity headers (x-user-id, x-user-role,
+    // x-username) are injected by the auth middleware after JWT verification
+    // and must NOT come from the original inbound request.
     let forward_headers = ["content-type", "authorization", "accept",
         "x-user-id", "x-user-role", "x-username", "x-request-id"];
     for name in &forward_headers {

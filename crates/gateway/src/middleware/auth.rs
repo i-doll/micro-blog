@@ -1,6 +1,6 @@
 use axum::{
     extract::Request,
-    http::{HeaderName, HeaderValue, StatusCode},
+    http::{HeaderName, HeaderValue, Method, StatusCode},
     middleware::Next,
     response::Response,
     Json,
@@ -17,8 +17,16 @@ pub async fn jwt_auth(
     mut request: Request,
     next: Next,
 ) -> Result<Response, (StatusCode, Json<serde_json::Value>)> {
+    // Always strip inbound identity headers to prevent spoofing.
+    // These are only injected below after successful JWT verification.
+    let headers = request.headers_mut();
+    headers.remove(&X_USER_ID);
+    headers.remove(&X_USER_ROLE);
+    headers.remove(&X_USERNAME);
+
     let path = request.uri().path();
-    let is_public = is_public_path(path);
+    let method = request.method().clone();
+    let is_public = is_public_path(path, &method);
 
     let auth_header = request
         .headers()
@@ -63,14 +71,80 @@ pub async fn jwt_auth(
     }
 }
 
-fn is_public_path(path: &str) -> bool {
-    matches!(
+fn is_public_path(path: &str, method: &Method) -> bool {
+    // Unconditionally public (any method)
+    if matches!(
         path,
-        "/health"
-            | "/api/auth/register"
-            | "/api/auth/login"
-            | "/api/auth/refresh"
-    ) || path.starts_with("/api/search")
-      || path.starts_with("/api/posts")
-      || path.starts_with("/api/comments")
+        "/health" | "/api/auth/register" | "/api/auth/login" | "/api/auth/refresh"
+    ) {
+        return true;
+    }
+
+    if path.starts_with("/api/search") {
+        return true;
+    }
+
+    // Read-only access is public; writes require JWT
+    if method == Method::GET || method == Method::HEAD || method == Method::OPTIONS {
+        if path.starts_with("/api/posts") || path.starts_with("/api/comments") {
+            return true;
+        }
+    }
+
+    false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_public_paths_any_method() {
+        for path in ["/health", "/api/auth/register", "/api/auth/login", "/api/auth/refresh"] {
+            assert!(is_public_path(path, &Method::GET));
+            assert!(is_public_path(path, &Method::POST));
+        }
+    }
+
+    #[test]
+    fn test_search_is_public() {
+        assert!(is_public_path("/api/search", &Method::GET));
+        assert!(is_public_path("/api/search?q=test", &Method::GET));
+    }
+
+    #[test]
+    fn test_posts_get_is_public() {
+        assert!(is_public_path("/api/posts", &Method::GET));
+        assert!(is_public_path("/api/posts/123", &Method::GET));
+        assert!(is_public_path("/api/posts", &Method::HEAD));
+        assert!(is_public_path("/api/posts", &Method::OPTIONS));
+    }
+
+    #[test]
+    fn test_posts_mutating_requires_auth() {
+        assert!(!is_public_path("/api/posts", &Method::POST));
+        assert!(!is_public_path("/api/posts/123", &Method::PUT));
+        assert!(!is_public_path("/api/posts/123", &Method::DELETE));
+        assert!(!is_public_path("/api/posts/123", &Method::PATCH));
+    }
+
+    #[test]
+    fn test_comments_get_is_public() {
+        assert!(is_public_path("/api/comments", &Method::GET));
+        assert!(is_public_path("/api/comments/456", &Method::GET));
+    }
+
+    #[test]
+    fn test_comments_mutating_requires_auth() {
+        assert!(!is_public_path("/api/comments", &Method::POST));
+        assert!(!is_public_path("/api/comments/456", &Method::PUT));
+        assert!(!is_public_path("/api/comments/456", &Method::DELETE));
+    }
+
+    #[test]
+    fn test_other_paths_not_public() {
+        assert!(!is_public_path("/api/notifications", &Method::GET));
+        assert!(!is_public_path("/api/users", &Method::GET));
+        assert!(!is_public_path("/api/media", &Method::POST));
+    }
 }

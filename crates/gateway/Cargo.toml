@@ -19,3 +19,8 @@ jsonwebtoken = { workspace = true }
 uuid = { workspace = true }
 hyper = { version = "1", features = ["full"] }
 governor = "0.8"
+
+[dev-dependencies]
+tower = { workspace = true, features = ["util"] }
+hyper = { version = "1", features = ["full"] }
+http-body-util = "0.1"
