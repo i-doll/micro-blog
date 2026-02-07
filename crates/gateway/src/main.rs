@@ -40,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let jwt_secret = config.jwt_secret.clone();
-    let rate_limit_state = RateLimitState::new(100); // 100 requests per minute per IP
+    let rate_limit_state = RateLimitState::new(100, config.trusted_proxies.clone());
 
     let app = Router::new()
         .route("/health", get(aggregated_health))
@@ -84,7 +84,11 @@ async fn main() -> anyhow::Result<()> {
 
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;
     tracing::info!("API Gateway listening on port {port}");
-    axum::serve(listener, app).await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .await?;
 
     Ok(())
 }

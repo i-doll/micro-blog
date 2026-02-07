@@ -1,10 +1,12 @@
 use std::env;
+use std::net::IpAddr;
 
 #[derive(Debug, Clone)]
 pub struct Config {
     pub port: u16,
     pub jwt_secret: String,
     pub cors_origins: Vec<String>,
+    pub trusted_proxies: Vec<IpAddr>,
     pub user_service_url: String,
     pub post_service_url: String,
     pub comment_service_url: String,
@@ -27,6 +29,13 @@ impl Config {
                 .split(',')
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty())
+                .collect(),
+            trusted_proxies: env::var("TRUSTED_PROXIES")
+                .unwrap_or_default()
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .filter_map(|s| s.parse::<IpAddr>().ok())
                 .collect(),
             user_service_url: env::var("USER_SERVICE_URL")
                 .unwrap_or_else(|_| "http://localhost:3001".to_string()),
