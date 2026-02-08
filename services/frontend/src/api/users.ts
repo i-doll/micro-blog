@@ -35,6 +35,19 @@ export function updateUserRole(id: string, role: string, token: string): Promise
   });
 }
 
+export function changePassword(
+  id: string,
+  currentPassword: string,
+  newPassword: string,
+  token: string,
+): Promise<void> {
+  return apiFetch(`/api/users/${id}/password`, {
+    method: 'PUT',
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    token,
+  });
+}
+
 export function deleteUser(id: string, token: string): Promise<void> {
   return apiFetch(`/api/users/${id}`, { method: 'DELETE', token });
 }

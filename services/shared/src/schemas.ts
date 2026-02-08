@@ -16,6 +16,11 @@ export const refreshSchema = z.object({
   refresh_token: z.string(),
 });
 
+export const changePasswordSchema = z.object({
+  current_password: z.string(),
+  new_password: z.string().min(8).max(128),
+});
+
 // User schemas
 export const updateUserSchema = z.object({
   username: z.string().min(3).max(50).optional(),

@@ -73,6 +73,14 @@ export function useUpdateUserRoleMutation() {
   });
 }
 
+export function useChangePasswordMutation() {
+  const { token } = useAuth();
+  return useMutation({
+    mutationFn: ({ id, currentPassword, newPassword }: { id: string; currentPassword: string; newPassword: string }) =>
+      usersApi.changePassword(id, currentPassword, newPassword, token!),
+  });
+}
+
 export function useDeleteUserMutation() {
   const { token } = useAuth();
   const queryClient = useQueryClient();

@@ -138,6 +138,9 @@ const styles = stylex.create({
     alignItems: 'center',
     gap: '0.5rem',
   },
+  avatarWrapper: {
+    position: 'relative',
+  },
   avatarBtn: {
     fontFamily: fonts.display,
     fontWeight: 700,
@@ -152,6 +155,38 @@ const styles = stylex.create({
     justifyContent: 'center',
     cursor: 'pointer',
     border: 'none',
+  },
+  avatarPanel: {
+    position: 'absolute',
+    top: 'calc(100% + 8px)',
+    right: 0,
+    width: '160px',
+    background: colors.bgCard,
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    boxShadow: shadows.xl,
+    zIndex: 200,
+    animationName: 'fadeIn',
+    animationDuration: '0.2s',
+    animationTimingFunction: easings.out,
+    overflow: 'hidden',
+  },
+  avatarMenuItem: {
+    fontFamily: fonts.sans,
+    fontSize: '0.8125rem',
+    color: colors.textPrimary,
+    padding: '0.625rem 1rem',
+    cursor: 'pointer',
+    background: 'none',
+    border: 'none',
+    width: '100%',
+    textAlign: 'left',
+    transition: 'background 0.15s',
+    ':hover': {
+      background: colors.bgSecondary,
+    },
   },
 });
 
@@ -168,24 +203,29 @@ function NotificationPostTitle({ notification }: { notification: Notification })
 
 export function HeaderActions() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
   const { data: notifData } = useNotificationsQuery();
   const markAllRead = useMarkNotificationsReadMutation();
   const [notifOpen, setNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const avatarRef = useRef<HTMLDivElement>(null);
 
   const notifications = notifData?.notifications || [];
   const unreadCount = notifData?.unreadCount || 0;
 
   const canWrite = user && (user.role === 'writer' || user.role === 'admin');
 
-  // Close notif panel on outside click
+  // Close panels on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
         setNotifOpen(false);
+      }
+      if (avatarRef.current && !avatarRef.current.contains(e.target as Node)) {
+        setAvatarOpen(false);
       }
     }
     document.addEventListener('click', handleClick);
@@ -278,13 +318,39 @@ export function HeaderActions() {
               Write
             </Button>
           )}
-          <button
-            {...stylex.props(styles.avatarBtn)}
-            onClick={() => navigate('/profile')}
-            title="Profile"
-          >
-            {user.username[0].toUpperCase()}
-          </button>
+          <div {...stylex.props(styles.avatarWrapper)} ref={avatarRef}>
+            <button
+              {...stylex.props(styles.avatarBtn)}
+              onClick={() => setAvatarOpen((o) => !o)}
+              title="Profile"
+            >
+              {user.username[0].toUpperCase()}
+            </button>
+            {avatarOpen && (
+              <div {...stylex.props(styles.avatarPanel)}>
+                <button
+                  {...stylex.props(styles.avatarMenuItem)}
+                  onClick={() => {
+                    navigate('/profile');
+                    setAvatarOpen(false);
+                  }}
+                >
+                  Profile
+                </button>
+                <button
+                  {...stylex.props(styles.avatarMenuItem)}
+                  onClick={() => {
+                    logout();
+                    setAvatarOpen(false);
+                    toast('Signed out', 'info');
+                    navigate('/');
+                  }}
+                >
+                  Sign Out
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

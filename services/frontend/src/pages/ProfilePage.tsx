@@ -10,7 +10,7 @@ import { FormGroup } from '../components/ui/FormGroup';
 import { Skeleton } from '../components/ui/Skeleton';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
-import { useUserQuery, usePostsQuery, useUpdateUserMutation } from '../hooks/queries';
+import { useUserQuery, usePostsQuery, useUpdateUserMutation, useChangePasswordMutation } from '../hooks/queries';
 
 const styles = stylex.create({
   profileHeader: {
@@ -139,9 +139,13 @@ export function ProfilePage() {
   const { user, token, updateUser } = useAuth();
   const { toast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [editUsername, setEditUsername] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editBio, setEditBio] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const { data: profile, isLoading: profileLoading } = useUserQuery(user?.id);
   const { data: publishedData } = usePostsQuery(
@@ -157,6 +161,36 @@ export function ProfilePage() {
   ];
 
   const updateUserMutation = useUpdateUserMutation();
+  const changePasswordMutation = useChangePasswordMutation();
+
+  const openPasswordModal = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordModalOpen(true);
+  };
+
+  const savePassword = async () => {
+    if (newPassword.length < 8) {
+      toast('New password must be at least 8 characters', 'error');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast('New passwords do not match', 'error');
+      return;
+    }
+    try {
+      await changePasswordMutation.mutateAsync({
+        id: user!.id,
+        currentPassword,
+        newPassword,
+      });
+      setPasswordModalOpen(false);
+      toast('Password changed successfully', 'success');
+    } catch (err: any) {
+      toast(err.message || 'Failed to change password', 'error');
+    }
+  };
 
   const openEdit = () => {
     if (!profile) return;
@@ -214,14 +248,8 @@ export function ProfilePage() {
               <Button variant="secondary" size="sm" onClick={openEdit}>
                 Edit Profile
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  // placeholder for alignment
-                }}
-              >
-                {/* Sign out is handled via a separate button below */}
+              <Button variant="secondary" size="sm" onClick={openPasswordModal}>
+                Change Password
               </Button>
             </div>
           </div>
@@ -301,6 +329,41 @@ export function ProfilePage() {
             Cancel
           </Button>
           <Button variant="primary" onClick={saveProfile}>
+            Save
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal open={passwordModalOpen} onClose={() => setPasswordModalOpen(false)} title="Change Password">
+        <FormGroup label="Current Password">
+          <input
+            {...stylex.props(styles.input)}
+            type="password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+          />
+        </FormGroup>
+        <FormGroup label="New Password">
+          <input
+            {...stylex.props(styles.input)}
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+          />
+        </FormGroup>
+        <FormGroup label="Confirm New Password">
+          <input
+            {...stylex.props(styles.input)}
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
+        </FormGroup>
+        <div {...stylex.props(styles.modalActions)}>
+          <Button variant="secondary" onClick={() => setPasswordModalOpen(false)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={savePassword}>
             Save
           </Button>
         </div>

@@ -132,6 +132,29 @@ export async function refresh(refreshToken: string) {
   return { access_token, refresh_token: newRefreshToken };
 }
 
+export async function changePassword(userId: string, currentPassword: string, newPassword: string) {
+  const user = await db.query.users.findFirst({
+    where: (users, { eq }) => eq(users.id, userId),
+  });
+  if (!user) {
+    throw new NotFoundError('User not found');
+  }
+
+  const valid = await bcrypt.compare(currentPassword, user.password_hash);
+  if (!valid) {
+    throw new UnauthorizedError('Current password is incorrect');
+  }
+
+  const password_hash = await bcrypt.hash(newPassword, 12);
+  await db
+    .update(schema.users)
+    .set({ password_hash, updated_at: new Date() })
+    .where(eq(schema.users.id, userId));
+
+  // Invalidate all refresh tokens to force re-login on other sessions
+  await db.delete(schema.refreshTokens).where(eq(schema.refreshTokens.user_id, userId));
+}
+
 /**
  * Determine the role assigned to a newly registered user.
  * Always returns 'user' — admin privileges are never granted via registration.

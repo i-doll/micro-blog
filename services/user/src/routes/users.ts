@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
-import { updateUserSchema, updateRoleSchema, paginationSchema, USER_ID_HEADER, USER_ROLE_HEADER } from '@blog/shared';
+import { updateUserSchema, updateRoleSchema, changePasswordSchema, paginationSchema, USER_ID_HEADER, USER_ROLE_HEADER } from '@blog/shared';
 import * as userService from '../services/user.js';
+import * as authService from '../services/auth.js';
 
 function isAdmin(request: { headers: Record<string, string | string[] | undefined> }): boolean {
   return request.headers[USER_ROLE_HEADER] === 'admin';
@@ -26,6 +27,20 @@ export async function userRoutes(app: FastifyInstance) {
     const body = updateRoleSchema.parse(request.body);
     const user = await userService.updateUserRole(id, body.role);
     return reply.send(user);
+  });
+
+  // Change password (only the user themselves, not even admins)
+  app.put('/users/:id/password', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const requesterId = request.headers[USER_ID_HEADER] as string;
+
+    if (requesterId !== id) {
+      return reply.status(403).send({ error: 'Can only change your own password' });
+    }
+
+    const body = changePasswordSchema.parse(request.body);
+    await authService.changePassword(id, body.current_password, body.new_password);
+    return reply.status(204).send();
   });
 
   app.get('/users/:id', async (request, reply) => {
