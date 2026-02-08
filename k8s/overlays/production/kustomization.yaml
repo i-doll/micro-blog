@@ -3,12 +3,13 @@ kind: Kustomization
 
 resources:
   - ../../base
-  - istio-peer-auth-strict.yaml
-  - istio-gateway-tls.yaml
-  - vault-connection-patch.yaml
-  - nats-tls-patch.yaml
 
 patches:
+  # Override base resources for production
+  - path: istio-peer-auth-strict.yaml
+  - path: istio-gateway-tls.yaml
+  - path: vault-connection-patch.yaml
+  - path: nats-tls-patch.yaml
   # Scale up services
   - target:
       kind: Deployment

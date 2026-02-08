@@ -21,6 +21,18 @@ data:
     authorization {
       users: [
         {
+          # auth-service
+          nkey: "PLACEHOLDER_AUTH_SERVICE_PUBKEY"
+          permissions: {
+            publish: {
+              allow: ["blog.user.created", "$JS.API.>", "_INBOX.>"]
+            }
+            subscribe: {
+              allow: ["blog.user.updated", "blog.user.deleted", "$JS.API.>", "$JS.ACK.>", "_INBOX.>"]
+            }
+          }
+        }
+        {
           # user-service
           nkey: "PLACEHOLDER_USER_SERVICE_PUBKEY"
           permissions: {
@@ -28,7 +40,7 @@ data:
               allow: ["blog.user.>", "$JS.API.>", "_INBOX.>"]
             }
             subscribe: {
-              allow: ["$JS.API.>", "$JS.ACK.>", "_INBOX.>"]
+              allow: ["blog.user.created", "$JS.API.>", "$JS.ACK.>", "_INBOX.>"]
             }
           }
         }
