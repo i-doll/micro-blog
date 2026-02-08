@@ -62,12 +62,24 @@ pub async fn jwt_auth(
         Some(token) => match decode_jwt(token, &jwt_secret) {
             Ok(claims) => {
                 let headers = request.headers_mut();
-                let user_id = HeaderValue::from_str(&claims.sub.to_string())
-                    .map_err(|_| (StatusCode::BAD_REQUEST, Json(json!({"error": "Invalid claim in token"}))))?;
-                let user_role = HeaderValue::from_str(&claims.role)
-                    .map_err(|_| (StatusCode::BAD_REQUEST, Json(json!({"error": "Invalid claim in token"}))))?;
-                let username = HeaderValue::from_str(&claims.username)
-                    .map_err(|_| (StatusCode::BAD_REQUEST, Json(json!({"error": "Invalid claim in token"}))))?;
+                let user_id = HeaderValue::from_str(&claims.sub.to_string()).map_err(|_| {
+                    (
+                        StatusCode::BAD_REQUEST,
+                        Json(json!({"error": "Invalid claim in token"})),
+                    )
+                })?;
+                let user_role = HeaderValue::from_str(&claims.role).map_err(|_| {
+                    (
+                        StatusCode::BAD_REQUEST,
+                        Json(json!({"error": "Invalid claim in token"})),
+                    )
+                })?;
+                let username = HeaderValue::from_str(&claims.username).map_err(|_| {
+                    (
+                        StatusCode::BAD_REQUEST,
+                        Json(json!({"error": "Invalid claim in token"})),
+                    )
+                })?;
                 headers.insert(X_USER_ID.clone(), user_id);
                 headers.insert(X_USER_ROLE.clone(), user_role);
                 headers.insert(X_USERNAME.clone(), username);
