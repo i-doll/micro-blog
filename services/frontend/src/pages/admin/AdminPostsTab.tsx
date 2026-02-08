@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router';
 import * as stylex from '@stylexjs/stylex';
 import { colors, fonts } from '../../theme/tokens.stylex';
+import { useViewTransitionNavigate } from '../../hooks/useViewTransitionNavigate';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Pagination } from '../../components/ui/Pagination';
@@ -36,7 +36,7 @@ const tableStyles = stylex.create({
 });
 
 export function AdminPostsTab() {
-  const navigate = useNavigate();
+  const navigate = useViewTransitionNavigate();
   const { toast } = useToast();
   const [page, setPage] = useState(1);
 

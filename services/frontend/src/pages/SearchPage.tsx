@@ -1,7 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import React, { useCallback, useState, useRef, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
 import { colors, fonts, radii } from '../theme/tokens.stylex';
+import { useViewTransitionNavigate } from '../hooks/useViewTransitionNavigate';
+import { useAuth } from '../hooks/useAuth';
+import { queryKeys } from '../lib/queryKeys';
+import * as postsApi from '../api/posts';
 import { Container } from '../components/layout/Container';
 import { SectionRule } from '../components/ui/SectionRule';
 import { Button } from '../components/ui/Button';
@@ -73,8 +77,60 @@ const styles = stylex.create({
   },
 });
 
+interface SearchResultCardProps {
+  result: { post_id: string; title: string; score?: number; tags?: string[] | string };
+}
+
+function SearchResultCard({ result }: SearchResultCardProps) {
+  const navigate = useViewTransitionNavigate();
+  const queryClient = useQueryClient();
+  const { token } = useAuth();
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const href = `/post/${result.post_id}`;
+
+  const prefetch = useCallback(() => {
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.posts.detail(result.post_id),
+      queryFn: () => postsApi.getPost(result.post_id, token),
+      staleTime: 30_000,
+    });
+  }, [queryClient, result.post_id, token]);
+
+  const tags = Array.isArray(result.tags)
+    ? result.tags
+    : typeof result.tags === 'string'
+      ? result.tags.split(',').map((s) => s.trim()).filter(Boolean)
+      : [];
+
+  return (
+    <div
+      {...stylex.props(styles.postCard)}
+      onMouseEnter={prefetch}
+      onClick={() => {
+        if (titleRef.current) {
+          titleRef.current.style.viewTransitionName = 'post-title';
+        }
+        navigate(href);
+      }}
+    >
+      <div {...stylex.props(styles.postCardMeta)}>
+        Score: {(result.score || 0).toFixed(2)}
+      </div>
+      <h2 ref={titleRef} {...stylex.props(styles.postCardTitle)}>
+        {result.title}
+      </h2>
+      {tags.length > 0 && (
+        <div {...stylex.props(styles.postCardTags)}>
+          {tags.map((t) => (
+            <Tag key={t}>{t}</Tag>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function SearchPage() {
-  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -124,33 +180,9 @@ export function SearchPage() {
           text={`No posts matched "${searchTerm}"`}
         />
       ) : results !== null ? (
-        results.map((r) => {
-          const tags = Array.isArray(r.tags)
-            ? r.tags
-            : typeof r.tags === 'string'
-              ? r.tags.split(',').map((s) => s.trim()).filter(Boolean)
-              : [];
-
-          return (
-            <div
-              key={r.post_id}
-              {...stylex.props(styles.postCard)}
-              onClick={() => navigate(`/post/${r.post_id}`)}
-            >
-              <div {...stylex.props(styles.postCardMeta)}>
-                Score: {(r.score || 0).toFixed(2)}
-              </div>
-              <h2 {...stylex.props(styles.postCardTitle)}>{r.title}</h2>
-              {tags.length > 0 && (
-                <div {...stylex.props(styles.postCardTags)}>
-                  {tags.map((t) => (
-                    <Tag key={t}>{t}</Tag>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })
+        results.map((r) => (
+          <SearchResultCard key={r.post_id} result={r} />
+        ))
       ) : null}
     </Container>
   );

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router';
 import * as stylex from '@stylexjs/stylex';
 import { colors, fonts, radii, shadows, easings } from '../../theme/tokens.stylex';
+import { useViewTransitionNavigate } from '../../hooks/useViewTransitionNavigate';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
 import { useToast } from '../../hooks/useToast';
@@ -202,7 +202,7 @@ function NotificationPostTitle({ notification }: { notification: Notification })
 }
 
 export function HeaderActions() {
-  const navigate = useNavigate();
+  const navigate = useViewTransitionNavigate();
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();

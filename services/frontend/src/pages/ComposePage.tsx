@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router';
 import * as stylex from '@stylexjs/stylex';
 import { colors, fonts, radii } from '../theme/tokens.stylex';
+import { useViewTransitionNavigate } from '../hooks/useViewTransitionNavigate';
 import { Container } from '../components/layout/Container';
 import { SectionRule } from '../components/ui/SectionRule';
 import { Button } from '../components/ui/Button';
@@ -169,7 +169,7 @@ const styles = stylex.create({
 });
 
 export function ComposePage() {
-  const navigate = useNavigate();
+  const navigate = useViewTransitionNavigate();
   const { token } = useAuth();
   const { toast } = useToast();
 

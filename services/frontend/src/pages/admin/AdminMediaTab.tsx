@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
 import { colors, fonts, radii } from '../../theme/tokens.stylex';
+import { useViewTransitionNavigate } from '../../hooks/useViewTransitionNavigate';
 import { Button } from '../../components/ui/Button';
 import { Pagination } from '../../components/ui/Pagination';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -68,7 +68,7 @@ function extractAllMediaIds(content: string): string[] {
 }
 
 export function AdminMediaTab() {
-  const navigate = useNavigate();
+  const navigate = useViewTransitionNavigate();
   const { token } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();

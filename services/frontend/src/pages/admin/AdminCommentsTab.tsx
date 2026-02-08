@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router';
 import * as stylex from '@stylexjs/stylex';
 import { colors, fonts } from '../../theme/tokens.stylex';
+import { useViewTransitionNavigate } from '../../hooks/useViewTransitionNavigate';
 import { Button } from '../../components/ui/Button';
 import { Pagination } from '../../components/ui/Pagination';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -61,7 +61,7 @@ const tableStyles = stylex.create({
 });
 
 function PostTitleCell({ postId }: { postId: string }) {
-  const navigate = useNavigate();
+  const navigate = useViewTransitionNavigate();
   const { data: post } = usePostQuery(postId);
   const title = post?.title || 'Unknown Post';
 
@@ -73,7 +73,7 @@ function PostTitleCell({ postId }: { postId: string }) {
 }
 
 export function AdminCommentsTab() {
-  const navigate = useNavigate();
+  const navigate = useViewTransitionNavigate();
   const { user, token } = useAuth();
   const { toast } = useToast();
   const [page, setPage] = useState(1);

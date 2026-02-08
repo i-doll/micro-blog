@@ -1,9 +1,12 @@
 import React from 'react';
-import { createHashRouter, RouterProvider, Outlet, useParams, Navigate } from 'react-router';
+import { createHashRouter, Outlet, useParams, Navigate } from 'react-router';
+import { RouterProvider } from 'react-router/dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
 import { colors, fonts, easings } from './theme/tokens.stylex';
 import { queryClient } from './lib/queryClient';
+import { queryKeys } from './lib/queryKeys';
+import * as postsApi from './api/posts';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
@@ -27,16 +30,13 @@ const layoutStyles = stylex.create({
     background: colors.bgPrimary,
     color: colors.textPrimary,
     lineHeight: 1.7,
-    transition: `background 0.4s ${easings.out}, color 0.4s ${easings.out}`,
+    transition: 'none',
     minHeight: '100vh',
     WebkitFontSmoothing: 'antialiased',
   },
   main: {
     padding: '2rem 0 4rem',
     minHeight: 'calc(100vh - 140px)',
-    animationName: 'fadeIn',
-    animationDuration: '0.3s',
-    animationTimingFunction: easings.out,
   },
   link: {
     color: colors.accent,
@@ -76,7 +76,15 @@ const router = createHashRouter([
     element: <Layout />,
     children: [
       { index: true, element: <HomePage /> },
-      { path: 'post/:id', element: <PostPage /> },
+      {
+        path: 'post/:id',
+        loader: ({ params }) =>
+          queryClient.prefetchQuery({
+            queryKey: queryKeys.posts.detail(params.id!),
+            queryFn: () => postsApi.getPost(params.id!),
+          }),
+        element: <PostPage />,
+      },
       { path: 'search', element: <SearchPage /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'register', element: <RegisterPage /> },

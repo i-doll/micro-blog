@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router';
+import { useParams } from 'react-router';
 import * as stylex from '@stylexjs/stylex';
 import { colors, fonts } from '../theme/tokens.stylex';
+import { useViewTransitionNavigate } from '../hooks/useViewTransitionNavigate';
 import { Container } from '../components/layout/Container';
 import { SectionRule } from '../components/ui/SectionRule';
 import { Button } from '../components/ui/Button';
@@ -156,7 +157,7 @@ const styles = stylex.create({
 
 export function PostPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const navigate = useViewTransitionNavigate();
   const { user, token } = useAuth();
   const { toast } = useToast();
   const [commentText, setCommentText] = useState('');
@@ -296,7 +297,7 @@ export function PostPage() {
         <>
           <article>
             <div {...stylex.props(styles.postHeader)}>
-              <h1 {...stylex.props(styles.postTitle)}>{post.title}</h1>
+              <h1 {...stylex.props(styles.postTitle)} style={{ viewTransitionName: 'post-title' }}>{post.title}</h1>
               <div {...stylex.props(styles.postMeta)}>
                 <span>{getUsername(post.author_id)}</span>
                 <span {...stylex.props(styles.dot)}>&middot;</span>

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router';
+import React, { useCallback, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import * as stylex from '@stylexjs/stylex';
 import { colors, fonts } from '../theme/tokens.stylex';
+import { useViewTransitionNavigate } from '../hooks/useViewTransitionNavigate';
 import { Container } from '../components/layout/Container';
 import { SectionRule } from '../components/ui/SectionRule';
 import { Tag } from '../components/ui/Tag';
@@ -9,6 +10,9 @@ import { Skeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Pagination } from '../components/ui/Pagination';
 import { usePostsQuery, useUsernameQueries } from '../hooks/queries';
+import { useAuth } from '../hooks/useAuth';
+import { queryKeys } from '../lib/queryKeys';
+import * as postsApi from '../api/posts';
 import { renderExcerptHtml } from '../lib/renderExcerpt';
 
 const styles = stylex.create({
@@ -87,8 +91,97 @@ const styles = stylex.create({
   },
 });
 
+interface PostCardProps {
+  post: { id: string; title: string; content?: string; author_id: string; status: string; tags?: string[]; published_at?: string; created_at: string };
+  featured: boolean;
+  getUsername: (id: string) => string;
+}
+
+function PostCard({ post, featured, getUsername }: PostCardProps) {
+  const navigate = useViewTransitionNavigate();
+  const queryClient = useQueryClient();
+  const { token } = useAuth();
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const href = `/post/${post.id}`;
+
+  const prefetch = useCallback(() => {
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.posts.detail(post.id),
+      queryFn: () => postsApi.getPost(post.id, token),
+      staleTime: 30_000,
+    });
+  }, [queryClient, post.id, token]);
+
+  const date = new Date(
+    post.published_at || post.created_at,
+  ).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+  return (
+    <div
+      {...stylex.props(
+        styles.postCard,
+        featured && styles.postCardFeatured,
+      )}
+      onMouseEnter={prefetch}
+      onClick={() => {
+        if (titleRef.current) {
+          titleRef.current.style.viewTransitionName = 'post-title';
+        }
+        navigate(href);
+      }}
+    >
+      <div {...stylex.props(styles.postCardMeta)}>
+        <span>{getUsername(post.author_id)}</span>
+        <span>&middot;</span>
+        <span>{date}</span>
+        {post.status === 'draft' && (
+          <span
+            style={{
+              background: 'var(--x-warning, #d4a017)',
+              color: '#000',
+              fontSize: '0.6875rem',
+              padding: '0.2rem 0.5rem',
+              borderRadius: '2px',
+            }}
+          >
+            Draft
+          </span>
+        )}
+      </div>
+      <h2
+        ref={titleRef}
+        {...stylex.props(
+          styles.postCardTitle,
+          featured && styles.postCardTitleFeatured,
+        )}
+      >
+        {post.title}
+      </h2>
+      <div
+        {...stylex.props(
+          styles.postCardExcerpt,
+          featured && styles.postCardExcerptFeatured,
+        )}
+        dangerouslySetInnerHTML={{
+          __html: renderExcerptHtml(post.content || ''),
+        }}
+      />
+      {post.tags && post.tags.length > 0 && (
+        <div {...stylex.props(styles.postCardTags)}>
+          {post.tags.map((t) => (
+            <Tag key={t}>{t}</Tag>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function HomePage() {
-  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const limit = 20;
 
@@ -121,70 +214,14 @@ export function HomePage() {
         />
       ) : (
         <div {...stylex.props(styles.postGrid)}>
-          {posts.map((post, i) => {
-            const date = new Date(
-              post.published_at || post.created_at,
-            ).toLocaleDateString('en-US', {
-              month: 'long',
-              day: 'numeric',
-              year: 'numeric',
-            });
-            const featured = i === 0 && page === 1;
-
-            return (
-              <div
-                key={post.id}
-                {...stylex.props(
-                  styles.postCard,
-                  featured && styles.postCardFeatured,
-                )}
-                onClick={() => navigate(`/post/${post.id}`)}
-              >
-                <div {...stylex.props(styles.postCardMeta)}>
-                  <span>{getUsername(post.author_id)}</span>
-                  <span>&middot;</span>
-                  <span>{date}</span>
-                  {post.status === 'draft' && (
-                    <span
-                      style={{
-                        background: 'var(--x-warning, #d4a017)',
-                        color: '#000',
-                        fontSize: '0.6875rem',
-                        padding: '0.2rem 0.5rem',
-                        borderRadius: '2px',
-                      }}
-                    >
-                      Draft
-                    </span>
-                  )}
-                </div>
-                <h2
-                  {...stylex.props(
-                    styles.postCardTitle,
-                    featured && styles.postCardTitleFeatured,
-                  )}
-                >
-                  {post.title}
-                </h2>
-                <div
-                  {...stylex.props(
-                    styles.postCardExcerpt,
-                    featured && styles.postCardExcerptFeatured,
-                  )}
-                  dangerouslySetInnerHTML={{
-                    __html: renderExcerptHtml(post.content || ''),
-                  }}
-                />
-                {post.tags && post.tags.length > 0 && (
-                  <div {...stylex.props(styles.postCardTags)}>
-                    {post.tags.map((t) => (
-                      <Tag key={t}>{t}</Tag>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {posts.map((post, i) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              featured={i === 0 && page === 1}
+              getUsername={getUsername}
+            />
+          ))}
         </div>
       )}
 

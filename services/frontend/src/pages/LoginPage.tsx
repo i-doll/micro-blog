@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router';
 import * as stylex from '@stylexjs/stylex';
 import { colors, fonts, radii } from '../theme/tokens.stylex';
+import { useViewTransitionNavigate } from '../hooks/useViewTransitionNavigate';
 import { Button } from '../components/ui/Button';
 import { FormGroup } from '../components/ui/FormGroup';
 import { useAuth } from '../hooks/useAuth';
@@ -53,7 +53,7 @@ const styles = stylex.create({
 });
 
 export function LoginPage() {
-  const navigate = useNavigate();
+  const navigate = useViewTransitionNavigate();
   const { login } = useAuth();
   const { toast } = useToast();
   const [email, setEmail] = useState('');

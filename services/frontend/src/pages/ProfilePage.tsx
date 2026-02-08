@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router';
 import * as stylex from '@stylexjs/stylex';
 import { colors, fonts } from '../theme/tokens.stylex';
+import { useViewTransitionNavigate } from '../hooks/useViewTransitionNavigate';
 import { Container } from '../components/layout/Container';
 import { SectionRule } from '../components/ui/SectionRule';
 import { Button } from '../components/ui/Button';
@@ -135,7 +135,7 @@ const styles = stylex.create({
 });
 
 export function ProfilePage() {
-  const navigate = useNavigate();
+  const navigate = useViewTransitionNavigate();
   const { user, token, updateUser } = useAuth();
   const { toast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
@@ -374,7 +374,7 @@ export function ProfilePage() {
 function LogoutButton() {
   const { logout } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const navigate = useViewTransitionNavigate();
 
   return (
     <Button

@@ -1,7 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router';
+import { useParams } from 'react-router';
 import * as stylex from '@stylexjs/stylex';
 import { colors, fonts, radii } from '../theme/tokens.stylex';
+import { useViewTransitionNavigate } from '../hooks/useViewTransitionNavigate';
 import { SectionRule } from '../components/ui/SectionRule';
 import { Button } from '../components/ui/Button';
 import { FormGroup } from '../components/ui/FormGroup';
@@ -165,7 +166,7 @@ const styles = stylex.create({
 
 export function EditPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const navigate = useViewTransitionNavigate();
   const { token } = useAuth();
   const { toast } = useToast();
 

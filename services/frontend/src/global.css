@@ -11,7 +11,8 @@ ul, ol { padding: 0; list-style: none; }
 
 button, input, select, textarea { font: inherit; }
 
-html { font-size: 16px; scroll-behavior: smooth; }
+html { font-size: 16px; scroll-behavior: smooth; background-color: #faf8f5; }
+html[data-theme="dark"] { background-color: #141210; }
 
 ::selection { background: rgba(192,88,48,0.12); color: var(--text-primary, #1a1714); }
 
@@ -128,4 +129,31 @@ html { font-size: 16px; scroll-behavior: smooth; }
   object-fit: cover;
   border-radius: 8px;
   margin-bottom: 0.75rem;
+}
+
+/* ===== VIEW TRANSITIONS ===== */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+/* Post title morphs between list and detail */
+::view-transition-group(post-title) {
+  animation-duration: 0.3s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+::view-transition-old(post-title) {
+  animation: none;
+  opacity: 0;
+}
+::view-transition-new(post-title) {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0.01ms !important;
+  }
 }

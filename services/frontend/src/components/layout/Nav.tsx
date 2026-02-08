@@ -1,7 +1,8 @@
 import React from 'react';
-import { useLocation, useNavigate } from 'react-router';
+import { useLocation } from 'react-router';
 import * as stylex from '@stylexjs/stylex';
 import { colors, fonts } from '../../theme/tokens.stylex';
+import { useViewTransitionNavigate } from '../../hooks/useViewTransitionNavigate';
 import { useAuth } from '../../hooks/useAuth';
 
 const styles = stylex.create({
@@ -37,7 +38,7 @@ const styles = stylex.create({
 });
 
 export function Nav() {
-  const navigate = useNavigate();
+  const navigate = useViewTransitionNavigate();
   const location = useLocation();
   const { user } = useAuth();
 

@@ -1,7 +1,7 @@
 import React from 'react';
-import { useNavigate } from 'react-router';
 import * as stylex from '@stylexjs/stylex';
 import { colors, fonts, easings } from '../../theme/tokens.stylex';
+import { useViewTransitionNavigate } from '../../hooks/useViewTransitionNavigate';
 import { Container } from './Container';
 import { Nav } from './Nav';
 import { HeaderActions } from './HeaderActions';
@@ -38,7 +38,7 @@ const styles = stylex.create({
 });
 
 export function Header() {
-  const navigate = useNavigate();
+  const navigate = useViewTransitionNavigate();
 
   return (
     <header {...stylex.props(styles.header)}>
