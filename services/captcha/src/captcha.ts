@@ -185,7 +185,7 @@ export function verifyChallenge(id: string, answer: string): string | null {
 
   if (!crypto.timingSafeEqual(paddedExpected, paddedActual)) return null;
 
-  const token = jwt.sign({ v: true }, config.captchaSecret, {
+  const token = jwt.sign({ v: true, jti: crypto.randomUUID() }, config.captchaSecret, {
     expiresIn: config.tokenExpirySeconds,
   });
 

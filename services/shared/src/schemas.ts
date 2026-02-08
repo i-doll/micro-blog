@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 // Auth schemas
 export const registerSchema = z.object({
-  username: z.string().min(3).max(50),
+  username: z.string().min(3).max(50).regex(/^[a-zA-Z0-9_-]+$/, 'Username may only contain letters, numbers, underscores, and hyphens'),
   email: z.string().email(),
   password: z.string().min(8).max(128),
 });
@@ -23,7 +23,7 @@ export const changePasswordSchema = z.object({
 
 // User schemas
 export const updateUserSchema = z.object({
-  username: z.string().min(3).max(50).optional(),
+  username: z.string().min(3).max(50).regex(/^[a-zA-Z0-9_-]+$/, 'Username may only contain letters, numbers, underscores, and hyphens').optional(),
   email: z.string().email().optional(),
   bio: z.string().max(500).optional(),
 });

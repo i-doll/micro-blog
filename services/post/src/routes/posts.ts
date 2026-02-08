@@ -24,19 +24,23 @@ export async function postRoutes(app: FastifyInstance) {
     const userId = request.headers[USER_ID_HEADER] as string | undefined;
     const writerOwnPosts = userRole === 'writer' && author_id && author_id === userId;
     const allStatuses = ((userRole === 'admin' && !status) || writerOwnPosts) as boolean;
-    const result = await postService.listPosts(query.page, query.limit, status, author_id, allStatuses);
+    const result = await postService.listPosts(query.page, query.limit, status, author_id, allStatuses, userId, userRole);
     return reply.send(result);
   });
 
   app.get('/posts/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
-    const post = await postService.getPostById(id);
+    const userId = request.headers[USER_ID_HEADER] as string | undefined;
+    const userRole = request.headers[USER_ROLE_HEADER] as string | undefined;
+    const post = await postService.getPostById(id, userId, userRole);
     return reply.send(post);
   });
 
   app.get('/posts/by-slug/:slug', async (request, reply) => {
     const { slug } = request.params as { slug: string };
-    const post = await postService.getPostBySlug(slug);
+    const userId = request.headers[USER_ID_HEADER] as string | undefined;
+    const userRole = request.headers[USER_ROLE_HEADER] as string | undefined;
+    const post = await postService.getPostBySlug(slug, userId, userRole);
     return reply.send(post);
   });
 

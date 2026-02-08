@@ -106,30 +106,55 @@ export async function createPost(authorId: string, data: {
   return { ...post, tags };
 }
 
-export async function getPostById(id: string) {
+export function enforcePostVisibility(
+  post: { status: string; author_id: string },
+  userId?: string, userRole?: string,
+) {
+  if (post.status === 'published') return;
+  if (userRole === 'admin') return;
+  if (userRole === 'writer' && userId && post.author_id === userId) return;
+  throw new NotFoundError('Post');
+}
+
+export async function getPostById(id: string, userId?: string, userRole?: string) {
   const post = await db.query.posts.findFirst({
     where: (posts, { eq }) => eq(posts.id, id),
   });
   if (!post) throw new NotFoundError('Post');
+  enforcePostVisibility(post, userId, userRole);
   const tags = await getPostTags(post.id);
   return { ...post, tags };
 }
 
-export async function getPostBySlug(slug: string) {
+export async function getPostBySlug(slug: string, userId?: string, userRole?: string) {
   const post = await db.query.posts.findFirst({
     where: (posts, { eq }) => eq(posts.slug, slug),
   });
   if (!post) throw new NotFoundError('Post');
+  enforcePostVisibility(post, userId, userRole);
   const tags = await getPostTags(post.id);
   return { ...post, tags };
 }
 
-export async function listPosts(page: number, limit: number, status?: string, authorId?: string, allStatuses?: boolean) {
+export async function listPosts(page: number, limit: number, status?: string, authorId?: string, allStatuses?: boolean, userId?: string, userRole?: string) {
   const offset = (page - 1) * limit;
   const conditions = [];
+
+  // Enforce visibility: non-published statuses only visible to admins or own-posts writers
+  let effectiveStatus = status;
+  let effectiveAllStatuses = allStatuses;
+  if (effectiveStatus && effectiveStatus !== 'published') {
+    const isAdmin = userRole === 'admin';
+    const isOwnWriter = userRole === 'writer' && authorId && userId && authorId === userId;
+    if (!isAdmin && !isOwnWriter) {
+      effectiveStatus = 'published';
+      effectiveAllStatuses = false;
+    }
+  }
+
   // Default to published unless a specific status is requested or admin requests all
-  if (!allStatuses || status) {
-    conditions.push(eq(schema.posts.status, status || 'published'));
+  if (!effectiveAllStatuses || effectiveStatus) {
+    conditions.push(eq(schema.posts.status, effectiveStatus || 'published'));
   }
   if (authorId) conditions.push(eq(schema.posts.author_id, authorId));
   const where = conditions.length === 1 ? conditions[0] : and(...conditions);

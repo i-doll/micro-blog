@@ -18,6 +18,10 @@ import { StringCodec } from 'nats';
 
 const sc = StringCodec();
 
+function hashRefreshToken(rawToken: string): string {
+  return crypto.createHash('sha256').update(rawToken + config.jwtSecret).digest('hex');
+}
+
 export async function register(username: string, email: string, password: string) {
   // Check for existing credentials
   const existing = await db.query.credentials.findFirst({
@@ -78,7 +82,7 @@ export async function login(email: string, password: string) {
 
   await db.insert(schema.refreshTokens).values({
     user_id: cred.id,
-    token: refreshToken,
+    token: hashRefreshToken(refreshToken),
     expires_at: expiresAt,
   });
 
@@ -92,7 +96,7 @@ export async function login(email: string, password: string) {
 export async function refresh(refreshToken: string) {
   const tokenRow = await db.query.refreshTokens.findFirst({
     where: (tokens, { eq, gt, and }) =>
-      and(eq(tokens.token, refreshToken), gt(tokens.expires_at, new Date())),
+      and(eq(tokens.token, hashRefreshToken(refreshToken)), gt(tokens.expires_at, new Date())),
   });
 
   if (!tokenRow) {
@@ -126,7 +130,7 @@ export async function refresh(refreshToken: string) {
 
   await db.insert(schema.refreshTokens).values({
     user_id: cred.id,
-    token: newRefreshToken,
+    token: hashRefreshToken(newRefreshToken),
     expires_at: expiresAt,
   });
 

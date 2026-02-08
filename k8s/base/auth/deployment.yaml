@@ -17,6 +17,13 @@ spec:
         traffic.sidecar.istio.io/excludeOutboundPorts: "5432,4222,8222"
     spec:
       serviceAccountName: auth-service
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       initContainers:
         - name: wait-postgres
           image: busybox:1.36
@@ -27,8 +34,16 @@ spec:
       containers:
         - name: auth-service
           image: blog/auth:dev
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 3009
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           env:
             - name: PORT
               value: "3009"
@@ -78,6 +93,9 @@ spec:
               port: 3009
             initialDelaySeconds: 10
             periodSeconds: 10
+      volumes:
+        - name: tmp
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

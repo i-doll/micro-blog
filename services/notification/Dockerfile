@@ -18,5 +18,7 @@ COPY services/notification/ services/notification/
 FROM node:22-alpine
 WORKDIR /app
 COPY --from=builder /app ./
+RUN chown -R node:node /app
+USER node
 EXPOSE 3004
 CMD ["npx", "tsx", "services/notification/src/index.ts"]

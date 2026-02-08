@@ -17,6 +17,13 @@ spec:
         traffic.sidecar.istio.io/excludeOutboundPorts: "5432,4222,8222"
     spec:
       serviceAccountName: notification-service
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       initContainers:
         - name: wait-postgres
           image: busybox:1.36
@@ -27,8 +34,16 @@ spec:
       containers:
         - name: notification-service
           image: blog/notification:dev
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 3004
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           env:
             - name: PORT
               value: "3004"
@@ -58,6 +73,9 @@ spec:
               port: 3004
             initialDelaySeconds: 10
             periodSeconds: 10
+      volumes:
+        - name: tmp
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

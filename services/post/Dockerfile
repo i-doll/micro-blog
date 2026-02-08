@@ -18,5 +18,7 @@ COPY services/post/ services/post/
 FROM node:22-alpine
 WORKDIR /app
 COPY --from=builder /app ./
+RUN chown -R node:node /app
+USER node
 EXPOSE 3002
 CMD ["npx", "tsx", "services/post/src/index.ts"]

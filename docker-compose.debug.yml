@@ -1,0 +1,37 @@
+version: "3.8"
+
+# Debug override — re-exposes internal service ports on the host.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.debug.yml up
+
+services:
+  auth-service:
+    ports:
+      - "3009:3009"
+
+  user-service:
+    ports:
+      - "3001:3001"
+
+  post-service:
+    ports:
+      - "3002:3002"
+
+  comment-service:
+    ports:
+      - "3003:3003"
+
+  notification-service:
+    ports:
+      - "3004:3004"
+
+  search-query:
+    ports:
+      - "3005:3005"
+
+  media-service:
+    ports:
+      - "3006:3006"
+
+  captcha-service:
+    ports:
+      - "3008:3008"

@@ -26,5 +26,7 @@ COPY --from=deps /app/package.json ./package.json
 COPY --from=deps /app/services/frontend/package.json services/frontend/package.json
 COPY --from=builder /app/services/frontend/dist/client services/frontend/dist/client
 COPY services/frontend/server services/frontend/server
+RUN chown -R node:node /app
+USER node
 EXPOSE 3007
 CMD ["npx", "tsx", "services/frontend/server/index.ts"]

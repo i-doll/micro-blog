@@ -14,7 +14,7 @@ export const credentials = pgTable('credentials', {
 export const refreshTokens = pgTable('refresh_tokens', {
   id: uuid('id').primaryKey().defaultRandom(),
   user_id: uuid('user_id').notNull().references(() => credentials.id, { onDelete: 'cascade' }),
-  token: varchar('token', { length: 500 }).notNull().unique(),
+  token: varchar('token_hash', { length: 500 }).notNull().unique(),
   expires_at: timestamp('expires_at', { withTimezone: true }).notNull(),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });

@@ -331,3 +331,108 @@ async fn invalid_jwt_on_post_returns_401() {
 
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
+
+// --------------------------------------------------------------------------
+// JWT with invalid header characters returns 400 (not panic)
+// --------------------------------------------------------------------------
+
+#[tokio::test]
+async fn jwt_with_invalid_header_chars_returns_400_not_panic() {
+    // Create a JWT whose username contains characters invalid in HTTP headers.
+    // The gateway must return 400 instead of panicking on HeaderValue::from_str.
+    let claims = Claims {
+        sub: Uuid::parse_str("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee").unwrap(),
+        username: "bad\r\nuser".to_string(),
+        role: "user".to_string(),
+        iat: chrono::Utc::now().timestamp(),
+        exp: (chrono::Utc::now() + chrono::Duration::hours(1)).timestamp(),
+    };
+    let token = blog_shared::jwt::encode_jwt(&claims, TEST_SECRET).unwrap();
+
+    let app = test_app();
+    let resp = app
+        .oneshot(
+            Request::builder()
+                .method(Method::POST)
+                .uri("/api/posts")
+                .header("authorization", format!("Bearer {token}"))
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"title":"test"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    let body = body_json(resp).await;
+    assert_eq!(body["error"], "Invalid claim in token");
+}
+
+// --------------------------------------------------------------------------
+// Captcha token replay is rejected
+// --------------------------------------------------------------------------
+
+#[derive(serde::Serialize)]
+struct TestCaptchaClaims {
+    v: bool,
+    jti: String,
+    exp: i64,
+}
+
+#[tokio::test]
+async fn captcha_token_replay_returns_403() {
+    let now = chrono::Utc::now().timestamp();
+    let claims = TestCaptchaClaims {
+        v: true,
+        jti: "unique-captcha-jti-for-replay-test".to_string(),
+        exp: now + 300,
+    };
+    let captcha_token = jsonwebtoken::encode(
+        &jsonwebtoken::Header::default(),
+        &claims,
+        &jsonwebtoken::EncodingKey::from_secret(TEST_CAPTCHA_SECRET.as_bytes()),
+    )
+    .unwrap();
+
+    // First request: captcha should pass (may fail at proxy since there's no
+    // real auth-service, but the captcha check itself should not reject it).
+    let app = test_app();
+    let resp = app
+        .oneshot(
+            Request::builder()
+                .method(Method::POST)
+                .uri("/api/auth/register")
+                .header("content-type", "application/json")
+                .header("x-captcha-token", &captcha_token)
+                .body(Body::from(
+                    r#"{"username":"test","email":"t@t.com","password":"12345678"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    // The first request should NOT be 403 (captcha passes).
+    assert_ne!(resp.status(), StatusCode::FORBIDDEN);
+
+    // Second request with the same captcha token: should be rejected as replay.
+    let app = test_app();
+    let resp = app
+        .oneshot(
+            Request::builder()
+                .method(Method::POST)
+                .uri("/api/auth/register")
+                .header("content-type", "application/json")
+                .header("x-captcha-token", &captcha_token)
+                .body(Body::from(
+                    r#"{"username":"test","email":"t@t.com","password":"12345678"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    let body = body_json(resp).await;
+    assert_eq!(body["error"], "Captcha token already used");
+}

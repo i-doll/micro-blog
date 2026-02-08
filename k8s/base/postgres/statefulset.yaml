@@ -18,6 +18,10 @@ spec:
         traffic.sidecar.istio.io/excludeInboundPorts: "5432"
     spec:
       serviceAccountName: postgres
+      securityContext:
+        fsGroup: 70
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: postgres
           image: postgres:16-alpine

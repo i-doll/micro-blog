@@ -16,9 +16,21 @@ spec:
         proxy.istio.io/config: '{"holdApplicationUntilProxyStarts": true}'
     spec:
       serviceAccountName: gateway
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: gateway
           image: blog/gateway:dev
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 3000
           env:

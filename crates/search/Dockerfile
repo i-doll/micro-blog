@@ -10,7 +10,9 @@ RUN --mount=type=cache,id=search-registry,target=/usr/local/cargo/registry \
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN useradd -r -s /bin/false -u 1000 appuser
 COPY --from=builder /usr/local/bin/blog-search /usr/local/bin/blog-search
-RUN mkdir -p /data/tantivy_index
+RUN mkdir -p /data/tantivy_index && chown -R appuser:appuser /data
+USER appuser
 EXPOSE 3005
 CMD ["blog-search"]

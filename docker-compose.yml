@@ -37,8 +37,6 @@ services:
       context: .
       dockerfile: services/auth/Dockerfile
       network: host
-    ports:
-      - "3009:3009"
     environment:
       PORT: "3009"
       DATABASE_URL: "postgresql://auth_service:${POSTGRES_PASSWORD}@postgres:5432/blog_auth"
@@ -60,8 +58,6 @@ services:
       context: .
       dockerfile: services/user/Dockerfile
       network: host
-    ports:
-      - "3001:3001"
     environment:
       PORT: "3001"
       DATABASE_URL: "postgresql://user_service:${POSTGRES_PASSWORD}@postgres:5432/blog_users"
@@ -79,8 +75,6 @@ services:
       context: .
       dockerfile: services/post/Dockerfile
       network: host
-    ports:
-      - "3002:3002"
     environment:
       PORT: "3002"
       DATABASE_URL: "postgresql://post_service:${POSTGRES_PASSWORD}@postgres:5432/blog_posts"
@@ -98,8 +92,6 @@ services:
       context: .
       dockerfile: services/comment/Dockerfile
       network: host
-    ports:
-      - "3003:3003"
     environment:
       PORT: "3003"
       DATABASE_URL: "postgresql://comment_service:${POSTGRES_PASSWORD}@postgres:5432/blog_comments"
@@ -117,8 +109,6 @@ services:
       context: .
       dockerfile: services/notification/Dockerfile
       network: host
-    ports:
-      - "3004:3004"
     environment:
       PORT: "3004"
       DATABASE_URL: "postgresql://notification_service:${POSTGRES_PASSWORD}@postgres:5432/blog_notifications"
@@ -152,8 +142,6 @@ services:
       context: .
       dockerfile: crates/search/Dockerfile
       network: host
-    ports:
-      - "3005:3005"
     environment:
       MODE: "query"
       PORT: "3005"
@@ -172,8 +160,6 @@ services:
       context: .
       dockerfile: crates/media/Dockerfile
       network: host
-    ports:
-      - "3006:3006"
     environment:
       PORT: "3006"
       DATABASE_URL: "postgresql://media_service:${POSTGRES_PASSWORD}@postgres:5432/blog_media"
@@ -192,8 +178,6 @@ services:
       context: .
       dockerfile: services/captcha/Dockerfile
       network: host
-    ports:
-      - "3008:3008"
     environment:
       PORT: "3008"
       CAPTCHA_SECRET: ${CAPTCHA_SECRET}

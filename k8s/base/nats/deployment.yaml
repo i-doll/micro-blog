@@ -16,7 +16,7 @@ data:
       users: [
         {
           # auth-service
-          nkey: "UAMIISEKNX4O5YTPY6FD4PH3Y5PGLNUONEUG5HUJTK7R3QF6VZ73IWKH"
+          nkey: "UAS42KRT2OJKG2HS74GEZJKCDYFZECNBKTHQT43V3DERXY36EJOUKJSG"
           permissions: {
             publish: {
               allow: ["blog.user.created", "$JS.API.>", "_INBOX.>"]
@@ -28,7 +28,7 @@ data:
         }
         {
           # user-service
-          nkey: "UAVYOZGHOPTQGX3PXLLRWKNNMDC32LNYBBYD4IF6D6A3O6FAOTFDYG2A"
+          nkey: "UANDQQJZH7FR4MVPD2MJAPHQ62MYJ2WSMCNOJGRMRD2CE432Y76MBVKZ"
           permissions: {
             publish: {
               allow: ["blog.user.>", "$JS.API.>", "_INBOX.>"]
@@ -40,7 +40,7 @@ data:
         }
         {
           # post-service
-          nkey: "UC67VCEMMBATNDXPUR5YDEARDVTEE433XJZDHUJSEWSX7DM2GULAP5ZY"
+          nkey: "UCMD7ET6X5IK3JX35CODOMYT7Z7HRAVBRDMPIK46DOH2DXSFFLMMRRTU"
           permissions: {
             publish: {
               allow: ["blog.post.>", "$JS.API.>", "_INBOX.>"]
@@ -52,7 +52,7 @@ data:
         }
         {
           # comment-service
-          nkey: "UDTA4HJAUPHDS7XXFVTKTWJZVF6RXCHCS5FKBRNUSJFDHZQ6WVNVLWMI"
+          nkey: "UBILCTM752P4GCNR5WWFL7RCO2WUTAAZDTO5IM6TBSTGVSKBPVTAGCXC"
           permissions: {
             publish: {
               allow: ["blog.comment.>", "$JS.API.>", "_INBOX.>"]
@@ -64,7 +64,7 @@ data:
         }
         {
           # notification-service
-          nkey: "UBHCHX5UEXCC4QIPYPQCN6JKY5MFJMRK2TIDASKKMJ65ALYT7GICZIPC"
+          nkey: "UA6MS4UQ4OZ5XGVATFNUHGKLC3C5VK6IRDDOLZY7XDWS5JQ6V6UVHAZG"
           permissions: {
             publish: {
               allow: ["$JS.API.>", "_INBOX.>"]
@@ -76,7 +76,7 @@ data:
         }
         {
           # search-indexer
-          nkey: "UDTYUYWKTR7A533TXNI7BMGZZN4KQ5554UJOGY5YFUU6H264LKGIVUP3"
+          nkey: "UDI5DR72B2ETC2JNW7FIG2BFMJXVP4HPPVE7DLCRS2MV2DJNB4ESWBEW"
           permissions: {
             publish: {
               allow: ["$JS.API.>", "_INBOX.>"]
@@ -88,7 +88,7 @@ data:
         }
         {
           # media-service
-          nkey: "UAXAA7OUZRLX24POWBZ5T6ITUDR343NRBU72R43J7JZOKYMFL2PYW6AH"
+          nkey: "UA7BQOJRFF5FUO73LXWKP3VYFE7RYKAMRPG2JMF5GNPCHAVHCJOQSL4D"
           permissions: {
             publish: {
               allow: ["blog.media.>", "$JS.API.>", "_INBOX.>"]
@@ -120,10 +120,22 @@ spec:
         traffic.sidecar.istio.io/excludeInboundPorts: "4222,8222"
     spec:
       serviceAccountName: nats
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: nats
           image: nats:2.10-alpine
           args: ["-c", "/etc/nats/nats.conf"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 4222
               name: client
@@ -134,6 +146,8 @@ spec:
               mountPath: /data
             - name: nats-config
               mountPath: /etc/nats
+            - name: tmp
+              mountPath: /tmp
           readinessProbe:
             httpGet:
               path: /healthz
@@ -146,6 +160,8 @@ spec:
         - name: nats-config
           configMap:
             name: nats-config
+        - name: tmp
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

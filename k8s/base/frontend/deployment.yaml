@@ -16,11 +16,26 @@ spec:
         proxy.istio.io/config: '{"holdApplicationUntilProxyStarts": true}'
     spec:
       serviceAccountName: frontend
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: frontend
           image: blog/frontend:dev
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 3007
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           env:
             - name: PORT
               value: "3007"
@@ -36,6 +51,9 @@ spec:
               port: 3007
             initialDelaySeconds: 10
             periodSeconds: 30
+      volumes:
+        - name: tmp
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

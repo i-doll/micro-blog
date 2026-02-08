@@ -1,3 +1,7 @@
+use std::collections::HashMap;
+use std::sync::{LazyLock, Mutex};
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use axum::{
     extract::Request,
     http::{HeaderName, HeaderValue, Method, StatusCode},
@@ -9,6 +13,9 @@ use blog_shared::jwt::decode_jwt;
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde::Deserialize;
 use serde_json::json;
+
+static USED_CAPTCHA_JTIS: LazyLock<Mutex<HashMap<String, i64>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 static X_USER_ID: HeaderName = HeaderName::from_static("x-user-id");
 static X_USER_ROLE: HeaderName = HeaderName::from_static("x-user-role");
@@ -55,18 +62,15 @@ pub async fn jwt_auth(
         Some(token) => match decode_jwt(token, &jwt_secret) {
             Ok(claims) => {
                 let headers = request.headers_mut();
-                headers.insert(
-                    X_USER_ID.clone(),
-                    HeaderValue::from_str(&claims.sub.to_string()).unwrap(),
-                );
-                headers.insert(
-                    X_USER_ROLE.clone(),
-                    HeaderValue::from_str(&claims.role).unwrap(),
-                );
-                headers.insert(
-                    X_USERNAME.clone(),
-                    HeaderValue::from_str(&claims.username).unwrap(),
-                );
+                let user_id = HeaderValue::from_str(&claims.sub.to_string())
+                    .map_err(|_| (StatusCode::BAD_REQUEST, Json(json!({"error": "Invalid claim in token"}))))?;
+                let user_role = HeaderValue::from_str(&claims.role)
+                    .map_err(|_| (StatusCode::BAD_REQUEST, Json(json!({"error": "Invalid claim in token"}))))?;
+                let username = HeaderValue::from_str(&claims.username)
+                    .map_err(|_| (StatusCode::BAD_REQUEST, Json(json!({"error": "Invalid claim in token"}))))?;
+                headers.insert(X_USER_ID.clone(), user_id);
+                headers.insert(X_USER_ROLE.clone(), user_role);
+                headers.insert(X_USERNAME.clone(), username);
             }
             Err(_) if is_public => {}
             Err(_) => {
@@ -100,6 +104,8 @@ fn requires_captcha(path: &str, method: &Method) -> bool {
 #[derive(Deserialize)]
 struct CaptchaClaims {
     v: bool,
+    jti: Option<String>,
+    exp: Option<i64>,
 }
 
 fn verify_captcha_token(
@@ -123,7 +129,31 @@ fn verify_captcha_token(
     );
 
     match token_data {
-        Ok(data) if data.claims.v => Ok(()),
+        Ok(data) if data.claims.v => {
+            // Enforce single-use via jti claim
+            if let Some(ref jti) = data.claims.jti {
+                let now = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs() as i64;
+                let exp = data.claims.exp.unwrap_or(now + 300);
+
+                let mut used = USED_CAPTCHA_JTIS.lock().unwrap_or_else(|e| e.into_inner());
+
+                // Prune expired entries
+                used.retain(|_, &mut e| e > now);
+
+                if used.contains_key(jti) {
+                    return Err((
+                        StatusCode::FORBIDDEN,
+                        Json(json!({"error": "Captcha token already used"})),
+                    ));
+                }
+
+                used.insert(jti.clone(), exp);
+            }
+            Ok(())
+        }
         _ => Err((
             StatusCode::FORBIDDEN,
             Json(json!({"error": "Invalid or expired captcha token"})),

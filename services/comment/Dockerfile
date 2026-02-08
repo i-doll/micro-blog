@@ -18,5 +18,7 @@ COPY services/comment/ services/comment/
 FROM node:22-alpine
 WORKDIR /app
 COPY --from=builder /app ./
+RUN chown -R node:node /app
+USER node
 EXPOSE 3003
 CMD ["npx", "tsx", "services/comment/src/index.ts"]

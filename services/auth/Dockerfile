@@ -19,5 +19,7 @@ COPY services/auth/ services/auth/
 FROM node:22-alpine
 WORKDIR /app
 COPY --from=builder /app ./
+RUN chown -R node:node /app
+USER node
 EXPOSE 3009
 CMD ["npx", "tsx", "services/auth/src/index.ts"]

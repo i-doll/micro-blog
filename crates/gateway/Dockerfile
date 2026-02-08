@@ -10,6 +10,8 @@ RUN --mount=type=cache,id=gateway-registry,target=/usr/local/cargo/registry \
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN useradd -r -s /bin/false -u 1000 appuser
 COPY --from=builder /usr/local/bin/blog-gateway /usr/local/bin/blog-gateway
+USER appuser
 EXPOSE 3000
 CMD ["blog-gateway"]
