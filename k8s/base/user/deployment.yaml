@@ -48,6 +48,21 @@ spec:
                 configMapKeyRef:
                   name: blog-config
                   key: LOG_LEVEL
+            - name: ADMIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: blog-secrets
+                  key: ADMIN_EMAIL
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: blog-secrets
+                  key: ADMIN_PASSWORD
+            - name: ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: blog-secrets
+                  key: ADMIN_USERNAME
           readinessProbe:
             httpGet:
               path: /health

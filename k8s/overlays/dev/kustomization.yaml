@@ -41,3 +41,12 @@ patches:
       - op: replace
         path: /stringData/MEDIA_DB_URL
         value: postgresql://media_service:password@postgres:5432/blog_media
+      - op: replace
+        path: /stringData/ADMIN_EMAIL
+        value: admin@blog.local
+      - op: replace
+        path: /stringData/ADMIN_PASSWORD
+        value: admin
+      - op: replace
+        path: /stringData/ADMIN_USERNAME
+        value: admin
