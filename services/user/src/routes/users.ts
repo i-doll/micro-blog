@@ -28,6 +28,16 @@ export async function userRoutes(app: FastifyInstance) {
     return reply.send(user);
   });
 
+  // Current user shorthand (must be registered before /users/:id)
+  app.get('/users/me', async (request, reply) => {
+    const userId = request.headers[USER_ID_HEADER] as string;
+    if (!userId) {
+      return reply.status(401).send({ error: 'Not authenticated' });
+    }
+    const user = await userService.getUserById(userId);
+    return reply.send(user);
+  });
+
   app.get('/users/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const user = await userService.getUserById(id);

@@ -1,3 +1,5 @@
+use std::sync::LazyLock;
+
 use axum::{
     body::Body,
     extract::Request,
@@ -7,32 +9,89 @@ use axum::{
     routing::{any, get},
     Json, Router,
 };
-use blog_shared::jwt::{encode_jwt, Claims};
+use blog_shared::jwt::Claims;
 use http_body_util::BodyExt;
+use jsonwebtoken::jwk::JwkSet;
 use serde_json::{json, Value};
 use tower::ServiceExt;
 use uuid::Uuid;
 
-const TEST_SECRET: &str = "test-secret-for-integration-tests";
 const TEST_CAPTCHA_SECRET: &str = "test-captcha-secret";
 
 static X_USER_ID: HeaderName = HeaderName::from_static("x-user-id");
 static X_USER_ROLE: HeaderName = HeaderName::from_static("x-user-role");
 static X_USERNAME: HeaderName = HeaderName::from_static("x-username");
 
+/// RSA test keypair generated once for all tests.
+static TEST_KEYS: LazyLock<TestKeys> = LazyLock::new(|| {
+    use jsonwebtoken::{EncodingKey, Header};
+    use rsa::pkcs8::{EncodePrivateKey, EncodePublicKey, LineEnding};
+    use rsa::traits::PublicKeyParts;
+
+    let private_key = rsa::RsaPrivateKey::new(&mut rand::thread_rng(), 2048).unwrap();
+    let pem = private_key.to_pkcs8_pem(LineEnding::LF).unwrap();
+
+    let encoding_key = EncodingKey::from_rsa_pem(pem.as_bytes()).unwrap();
+
+    let pub_key = private_key.to_public_key();
+    let pub_pem = pub_key.to_public_key_pem(LineEnding::LF).unwrap();
+    let decoding_key = jsonwebtoken::DecodingKey::from_rsa_pem(pub_pem.as_bytes()).unwrap();
+
+    // Construct a JWK manually for the JWKS set
+    let n = base64_url_encode(&pub_key.n().to_bytes_be());
+    let e = base64_url_encode(&pub_key.e().to_bytes_be());
+    let jwks_json = serde_json::json!({
+        "keys": [{
+            "kty": "RSA",
+            "alg": "RS256",
+            "use": "sig",
+            "kid": "test-kid",
+            "n": n,
+            "e": e,
+        }]
+    });
+    let jwks: JwkSet = serde_json::from_value(jwks_json).unwrap();
+
+    TestKeys {
+        encoding_key,
+        _decoding_key: decoding_key,
+        jwks,
+        header: Header {
+            alg: jsonwebtoken::Algorithm::RS256,
+            kid: Some("test-kid".to_string()),
+            ..Default::default()
+        },
+    }
+});
+
+fn base64_url_encode(bytes: &[u8]) -> String {
+    use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+    use base64::Engine;
+    URL_SAFE_NO_PAD.encode(bytes)
+}
+
+struct TestKeys {
+    encoding_key: jsonwebtoken::EncodingKey,
+    _decoding_key: jsonwebtoken::DecodingKey,
+    jwks: JwkSet,
+    header: jsonwebtoken::Header,
+}
+
 /// Build a test router that mirrors the gateway's middleware stack but uses
 /// a handler that echoes back identity headers (so we can inspect them).
+/// Uses a pre-loaded JWKS cache instead of fetching from a URL.
 fn test_app() -> Router {
-    let jwt_secret = TEST_SECRET.to_string();
     let captcha_secret = TEST_CAPTCHA_SECRET.to_string();
+    let jwks_cache =
+        blog_gateway::middleware::auth::JwksCache::new_with_jwks(TEST_KEYS.jwks.clone());
 
     Router::new()
         .route("/health", get(|| async { Json(json!({"status": "ok"})) }))
         .fallback(any(echo_identity_headers))
         .layer(middleware::from_fn(move |req: Request, next: Next| {
-            let secret = jwt_secret.clone();
+            let cache = jwks_cache.clone();
             let captcha = captcha_secret.clone();
-            blog_gateway::middleware::auth::jwt_auth(secret, captcha, req, next)
+            blog_gateway::middleware::auth::jwt_auth(cache, captcha, req, next)
         }))
 }
 
@@ -62,13 +121,14 @@ async fn echo_identity_headers(request: Request) -> Response {
 }
 
 fn valid_token() -> String {
-    let claims = Claims::new(
+    let mut claims = Claims::new(
         Uuid::parse_str("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee").unwrap(),
         "testuser".to_string(),
         "user".to_string(),
         24,
     );
-    encode_jwt(&claims, TEST_SECRET).unwrap()
+    claims.iss = Some("blog-auth".to_string());
+    jsonwebtoken::encode(&TEST_KEYS.header, &claims, &TEST_KEYS.encoding_key).unwrap()
 }
 
 async fn body_json(resp: Response) -> Value {
@@ -346,8 +406,10 @@ async fn jwt_with_invalid_header_chars_returns_400_not_panic() {
         role: "user".to_string(),
         iat: chrono::Utc::now().timestamp(),
         exp: (chrono::Utc::now() + chrono::Duration::hours(1)).timestamp(),
+        iss: Some("blog-auth".to_string()),
     };
-    let token = blog_shared::jwt::encode_jwt(&claims, TEST_SECRET).unwrap();
+    let token =
+        jsonwebtoken::encode(&TEST_KEYS.header, &claims, &TEST_KEYS.encoding_key).unwrap();
 
     let app = test_app();
     let resp = app
@@ -384,7 +446,7 @@ async fn captcha_token_replay_returns_403() {
     let now = chrono::Utc::now().timestamp();
     let claims = TestCaptchaClaims {
         v: true,
-        jti: "unique-captcha-jti-for-replay-test".to_string(),
+        jti: "unique-captcha-jti-for-replay-test-rs256".to_string(),
         exp: now + 300,
     };
     let captcha_token = jsonwebtoken::encode(

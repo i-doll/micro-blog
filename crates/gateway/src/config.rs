@@ -4,7 +4,7 @@ use std::net::IpAddr;
 #[derive(Debug, Clone)]
 pub struct Config {
     pub port: u16,
-    pub jwt_secret: String,
+    pub jwks_url: String,
     pub cors_origins: Vec<String>,
     pub trusted_proxies: Vec<IpAddr>,
     pub auth_service_url: String,
@@ -25,8 +25,9 @@ impl Config {
                 .unwrap_or_else(|_| "3000".to_string())
                 .parse()
                 .expect("PORT must be a number"),
-            jwt_secret: env::var("JWT_SECRET")
-                .expect("FATAL: Required environment variable JWT_SECRET is not set"),
+            jwks_url: env::var("JWKS_URL").unwrap_or_else(|_| {
+                "http://localhost:3009/auth/.well-known/jwks.json".to_string()
+            }),
             cors_origins: env::var("CORS_ORIGINS")
                 .unwrap_or_default()
                 .split(',')

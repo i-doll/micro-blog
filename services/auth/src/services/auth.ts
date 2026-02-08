@@ -1,15 +1,14 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { db, schema } from '../db/index.js';
 import { config } from '../config.js';
+import { signJwt } from '../jwks.js';
 import { getJetStream } from './nats.js';
 import {
   USER_CREATED,
   createEnvelope,
   type UserCreated,
-  type JwtClaims,
   ConflictError,
   UnauthorizedError,
   NotFoundError,
@@ -19,7 +18,7 @@ import { StringCodec } from 'nats';
 const sc = StringCodec();
 
 function hashRefreshToken(rawToken: string): string {
-  return crypto.createHash('sha256').update(rawToken + config.jwtSecret).digest('hex');
+  return crypto.createHmac('sha256', config.databaseUrl).update(rawToken).digest('hex');
 }
 
 export async function register(username: string, email: string, password: string) {
@@ -66,15 +65,11 @@ export async function login(email: string, password: string) {
     throw new UnauthorizedError('Invalid credentials');
   }
 
-  const claims: JwtClaims = {
+  const access_token = await signJwt({
     sub: cred.id,
     username: cred.username,
     role: cred.role,
-    iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + config.jwtExpiryHours * 3600,
-  };
-
-  const access_token = jwt.sign(claims, config.jwtSecret);
+  });
 
   // Generate refresh token
   const refreshToken = crypto.randomUUID();
@@ -114,15 +109,11 @@ export async function refresh(refreshToken: string) {
   // Delete old refresh token
   await db.delete(schema.refreshTokens).where(eq(schema.refreshTokens.id, tokenRow.id));
 
-  const claims: JwtClaims = {
+  const access_token = await signJwt({
     sub: cred.id,
     username: cred.username,
     role: cred.role,
-    iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + config.jwtExpiryHours * 3600,
-  };
-
-  const access_token = jwt.sign(claims, config.jwtSecret);
+  });
 
   // New refresh token
   const newRefreshToken = crypto.randomUUID();

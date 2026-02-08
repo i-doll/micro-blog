@@ -3,10 +3,11 @@ import crypto from 'node:crypto';
 
 // Re-implement the hash function locally to test its properties,
 // since it's a private function in the auth service.
-const TEST_JWT_SECRET = 'test-secret';
+// Uses HMAC-SHA256 with a stable per-deployment key (databaseUrl).
+const TEST_DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
 
 function hashRefreshToken(rawToken: string): string {
-  return crypto.createHash('sha256').update(rawToken + TEST_JWT_SECRET).digest('hex');
+  return crypto.createHmac('sha256', TEST_DATABASE_URL).update(rawToken).digest('hex');
 }
 
 describe('refresh token hashing', () => {
@@ -35,10 +36,10 @@ describe('refresh token hashing', () => {
     expect(hash).not.toBe(token);
   });
 
-  it('same token with different secrets produces different hashes', () => {
+  it('same token with different keys produces different hashes', () => {
     const token = 'some-token';
-    const hash1 = crypto.createHash('sha256').update(token + 'secret-a').digest('hex');
-    const hash2 = crypto.createHash('sha256').update(token + 'secret-b').digest('hex');
+    const hash1 = crypto.createHmac('sha256', 'key-a').update(token).digest('hex');
+    const hash2 = crypto.createHmac('sha256', 'key-b').update(token).digest('hex');
     expect(hash1).not.toBe(hash2);
   });
 });

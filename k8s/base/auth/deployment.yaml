@@ -44,6 +44,9 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            - name: rsa-key
+              mountPath: /secrets/rsa
+              readOnly: true
           env:
             - name: PORT
               value: "3009"
@@ -52,11 +55,13 @@ spec:
                 secretKeyRef:
                   name: auth-service-db-creds
                   key: DATABASE_URL
-            - name: JWT_SECRET
+            - name: RSA_PRIVATE_KEY_PATH
+              value: "/secrets/rsa/RSA_PRIVATE_KEY"
+            - name: CAPTCHA_SECRET
               valueFrom:
                 secretKeyRef:
                   name: blog-shared-secrets
-                  key: JWT_SECRET
+                  key: CAPTCHA_SECRET
             - name: NATS_URL
               valueFrom:
                 configMapKeyRef:
@@ -96,6 +101,9 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
+        - name: rsa-key
+          secret:
+            secretName: blog-rsa-key
 ---
 apiVersion: v1
 kind: Service

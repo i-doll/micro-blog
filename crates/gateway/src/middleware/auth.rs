@@ -1,6 +1,7 @@
 use std::collections::HashMap;
-use std::sync::{LazyLock, Mutex};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::sync::{Arc, LazyLock, Mutex, RwLock};
+
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use axum::{
     extract::Request,
@@ -9,8 +10,8 @@ use axum::{
     response::Response,
     Json,
 };
-use blog_shared::jwt::decode_jwt;
-use jsonwebtoken::{decode, DecodingKey, Validation};
+use blog_shared::jwt::decode_jwt_rs256;
+use jsonwebtoken::{decode, jwk::JwkSet, DecodingKey, Validation};
 use serde::Deserialize;
 use serde_json::json;
 
@@ -22,8 +23,109 @@ static X_USER_ROLE: HeaderName = HeaderName::from_static("x-user-role");
 static X_USERNAME: HeaderName = HeaderName::from_static("x-username");
 static X_CAPTCHA_TOKEN: HeaderName = HeaderName::from_static("x-captcha-token");
 
+/// Shared JWKS cache used by the auth middleware.
+#[derive(Clone)]
+pub struct JwksCache {
+    inner: Arc<JwksCacheInner>,
+}
+
+struct JwksCacheInner {
+    jwks_url: String,
+    client: reqwest::Client,
+    cached: RwLock<Option<CachedJwks>>,
+    refresh_interval: Duration,
+}
+
+struct CachedJwks {
+    jwks: JwkSet,
+    fetched_at: Instant,
+}
+
+impl JwksCache {
+    pub fn new(jwks_url: String) -> Self {
+        Self {
+            inner: Arc::new(JwksCacheInner {
+                jwks_url,
+                client: reqwest::Client::new(),
+                cached: RwLock::new(None),
+                refresh_interval: Duration::from_secs(300), // 5 minutes
+            }),
+        }
+    }
+
+    /// Create a JwksCache pre-loaded with a JWKS (for testing).
+    pub fn new_with_jwks(jwks: JwkSet) -> Self {
+        Self {
+            inner: Arc::new(JwksCacheInner {
+                jwks_url: String::new(),
+                client: reqwest::Client::new(),
+                cached: RwLock::new(Some(CachedJwks {
+                    jwks,
+                    fetched_at: Instant::now(),
+                })),
+                refresh_interval: Duration::from_secs(u64::MAX / 2), // never expire in tests
+            }),
+        }
+    }
+
+    /// Get the cached JWKS, fetching or refreshing as needed.
+    pub async fn get_jwks(
+        &self,
+    ) -> Result<JwkSet, (StatusCode, Json<serde_json::Value>)> {
+        // Check if we have a valid cached copy
+        {
+            let cached = self.inner.cached.read().unwrap_or_else(|e| e.into_inner());
+            if let Some(ref c) = *cached {
+                if c.fetched_at.elapsed() < self.inner.refresh_interval {
+                    return Ok(c.jwks.clone());
+                }
+            }
+        }
+
+        // Need to fetch/refresh
+        self.fetch_jwks().await
+    }
+
+    async fn fetch_jwks(
+        &self,
+    ) -> Result<JwkSet, (StatusCode, Json<serde_json::Value>)> {
+        let resp = self
+            .inner
+            .client
+            .get(&self.inner.jwks_url)
+            .send()
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to fetch JWKS from {}: {e}", self.inner.jwks_url);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({"error": "Failed to fetch JWKS"})),
+                )
+            })?;
+
+        let jwks: JwkSet = resp.json().await.map_err(|e| {
+            tracing::error!("Failed to parse JWKS response: {e}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Invalid JWKS response"})),
+            )
+        })?;
+
+        // Cache the result
+        {
+            let mut cached = self.inner.cached.write().unwrap_or_else(|e| e.into_inner());
+            *cached = Some(CachedJwks {
+                jwks: jwks.clone(),
+                fetched_at: Instant::now(),
+            });
+        }
+
+        Ok(jwks)
+    }
+}
+
 pub async fn jwt_auth(
-    jwt_secret: String,
+    jwks_cache: JwksCache,
     captcha_secret: String,
     mut request: Request,
     next: Next,
@@ -59,39 +161,43 @@ pub async fn jwt_auth(
     };
 
     match token {
-        Some(token) => match decode_jwt(token, &jwt_secret) {
-            Ok(claims) => {
-                let headers = request.headers_mut();
-                let user_id = HeaderValue::from_str(&claims.sub.to_string()).map_err(|_| {
-                    (
-                        StatusCode::BAD_REQUEST,
-                        Json(json!({"error": "Invalid claim in token"})),
-                    )
-                })?;
-                let user_role = HeaderValue::from_str(&claims.role).map_err(|_| {
-                    (
-                        StatusCode::BAD_REQUEST,
-                        Json(json!({"error": "Invalid claim in token"})),
-                    )
-                })?;
-                let username = HeaderValue::from_str(&claims.username).map_err(|_| {
-                    (
-                        StatusCode::BAD_REQUEST,
-                        Json(json!({"error": "Invalid claim in token"})),
-                    )
-                })?;
-                headers.insert(X_USER_ID.clone(), user_id);
-                headers.insert(X_USER_ROLE.clone(), user_role);
-                headers.insert(X_USERNAME.clone(), username);
+        Some(token) => {
+            let jwks = jwks_cache.get_jwks().await?;
+            match decode_jwt_rs256(token, &jwks) {
+                Ok(claims) => {
+                    let headers = request.headers_mut();
+                    let user_id =
+                        HeaderValue::from_str(&claims.sub.to_string()).map_err(|_| {
+                            (
+                                StatusCode::BAD_REQUEST,
+                                Json(json!({"error": "Invalid claim in token"})),
+                            )
+                        })?;
+                    let user_role = HeaderValue::from_str(&claims.role).map_err(|_| {
+                        (
+                            StatusCode::BAD_REQUEST,
+                            Json(json!({"error": "Invalid claim in token"})),
+                        )
+                    })?;
+                    let username = HeaderValue::from_str(&claims.username).map_err(|_| {
+                        (
+                            StatusCode::BAD_REQUEST,
+                            Json(json!({"error": "Invalid claim in token"})),
+                        )
+                    })?;
+                    headers.insert(X_USER_ID.clone(), user_id);
+                    headers.insert(X_USER_ROLE.clone(), user_role);
+                    headers.insert(X_USERNAME.clone(), username);
+                }
+                Err(_) if is_public => {}
+                Err(_) => {
+                    return Err((
+                        StatusCode::UNAUTHORIZED,
+                        Json(json!({"error": "Invalid or expired token"})),
+                    ));
+                }
             }
-            Err(_) if is_public => {}
-            Err(_) => {
-                return Err((
-                    StatusCode::UNAUTHORIZED,
-                    Json(json!({"error": "Invalid or expired token"})),
-                ));
-            }
-        },
+        }
         None if is_public => {}
         None => {
             return Err((
@@ -182,6 +288,11 @@ fn is_public_path(path: &str, method: &Method) -> bool {
         return true;
     }
 
+    // JWKS endpoint is public
+    if path.starts_with("/api/auth/.well-known/") {
+        return true;
+    }
+
     if path.starts_with("/api/captcha") {
         return true;
     }
@@ -217,6 +328,14 @@ mod tests {
             assert!(is_public_path(path, &Method::GET));
             assert!(is_public_path(path, &Method::POST));
         }
+    }
+
+    #[test]
+    fn test_jwks_endpoint_is_public() {
+        assert!(is_public_path(
+            "/api/auth/.well-known/jwks.json",
+            &Method::GET
+        ));
     }
 
     #[test]

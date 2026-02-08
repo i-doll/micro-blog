@@ -41,7 +41,7 @@ services:
       PORT: "3009"
       DATABASE_URL: "postgresql://auth_service:${POSTGRES_PASSWORD}@postgres:5432/blog_auth"
       NATS_URL: "nats://nats:4222"
-      JWT_SECRET: ${JWT_SECRET}
+      CAPTCHA_SECRET: ${CAPTCHA_SECRET}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
@@ -192,7 +192,7 @@ services:
       - "3000:3000"
     environment:
       PORT: "3000"
-      JWT_SECRET: ${JWT_SECRET}
+      JWKS_URL: "http://auth-service:3009/auth/.well-known/jwks.json"
       CAPTCHA_SECRET: ${CAPTCHA_SECRET}
       CORS_ORIGINS: ${CORS_ORIGINS}
       AUTH_SERVICE_URL: "http://auth-service:3009"

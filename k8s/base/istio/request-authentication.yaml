@@ -1,0 +1,20 @@
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata:
+  name: jwt-auth
+  namespace: blog
+spec:
+  jwtRules:
+    - forwardOriginalToken: true
+      fromHeaders:
+        - name: Authorization
+          prefix: "Bearer "
+      issuer: blog-auth
+      jwksUri: http://auth-service.blog.svc.cluster.local:3009/auth/.well-known/jwks.json
+      outputClaimToHeaders:
+        - header: x-user-id
+          claim: sub
+        - header: x-user-role
+          claim: role
+        - header: x-username
+          claim: username

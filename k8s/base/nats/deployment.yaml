@@ -16,7 +16,7 @@ data:
       users: [
         {
           # auth-service
-          nkey: "UAS42KRT2OJKG2HS74GEZJKCDYFZECNBKTHQT43V3DERXY36EJOUKJSG"
+          nkey: "UCKCAFXLX5CA67QYQNJ7H46H5WWWTTEIIPE7PQD7BWVUMTEKZWIJ7OVC"
           permissions: {
             publish: {
               allow: ["blog.user.created", "$JS.API.>", "_INBOX.>"]
@@ -28,7 +28,7 @@ data:
         }
         {
           # user-service
-          nkey: "UANDQQJZH7FR4MVPD2MJAPHQ62MYJ2WSMCNOJGRMRD2CE432Y76MBVKZ"
+          nkey: "UCBBYZ4WUPUDWQQ2QNDCILHZQQGE3R5GZABPM5ECAFA5SLDYN2WD5HZ5"
           permissions: {
             publish: {
               allow: ["blog.user.>", "$JS.API.>", "_INBOX.>"]
@@ -40,7 +40,7 @@ data:
         }
         {
           # post-service
-          nkey: "UCMD7ET6X5IK3JX35CODOMYT7Z7HRAVBRDMPIK46DOH2DXSFFLMMRRTU"
+          nkey: "UBEPMVYVNHA4KFFQCZTYXTW64ZXXRC5Q3S6SDMT7IOKBVVLMDHC6HEGE"
           permissions: {
             publish: {
               allow: ["blog.post.>", "$JS.API.>", "_INBOX.>"]
@@ -52,7 +52,7 @@ data:
         }
         {
           # comment-service
-          nkey: "UBILCTM752P4GCNR5WWFL7RCO2WUTAAZDTO5IM6TBSTGVSKBPVTAGCXC"
+          nkey: "UDE3DJZAGWGV7M7LEPZYT4QH7IE3EDQBTY54YSCQVQXYWCDDCRZGX4F3"
           permissions: {
             publish: {
               allow: ["blog.comment.>", "$JS.API.>", "_INBOX.>"]
@@ -64,7 +64,7 @@ data:
         }
         {
           # notification-service
-          nkey: "UA6MS4UQ4OZ5XGVATFNUHGKLC3C5VK6IRDDOLZY7XDWS5JQ6V6UVHAZG"
+          nkey: "UD3SOHRJIJD5AV4XHZ5YZPW7DGW4CUS7GTQTESO2BQID4IZ4G6AEMJS5"
           permissions: {
             publish: {
               allow: ["$JS.API.>", "_INBOX.>"]
@@ -76,7 +76,7 @@ data:
         }
         {
           # search-indexer
-          nkey: "UDI5DR72B2ETC2JNW7FIG2BFMJXVP4HPPVE7DLCRS2MV2DJNB4ESWBEW"
+          nkey: "UA45R4REVP7Q5ZVBO3DDOOZ7VOOSVAGZ6V223X7PX7IALVFOHFD5J4H7"
           permissions: {
             publish: {
               allow: ["$JS.API.>", "_INBOX.>"]
@@ -88,7 +88,7 @@ data:
         }
         {
           # media-service
-          nkey: "UA7BQOJRFF5FUO73LXWKP3VYFE7RYKAMRPG2JMF5GNPCHAVHCJOQSL4D"
+          nkey: "UAW2NSPKSHZZEMHZM2LLNA6CSG32V2GS47PDADUJNGZJN7KYA6FB2Z35"
           permissions: {
             publish: {
               allow: ["blog.media.>", "$JS.API.>", "_INBOX.>"]

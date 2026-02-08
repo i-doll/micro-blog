@@ -13,7 +13,7 @@ use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 use crate::config::Config;
-use crate::middleware::auth::jwt_auth;
+use crate::middleware::auth::{jwt_auth, JwksCache};
 use crate::middleware::rate_limit::{rate_limit, RateLimitState};
 use crate::routes::health::aggregated_health;
 use crate::routes::proxy::{proxy_handler, AppState};
@@ -39,7 +39,7 @@ async fn main() -> anyhow::Result<()> {
             .unwrap(),
     };
 
-    let jwt_secret = config.jwt_secret.clone();
+    let jwks_cache = JwksCache::new(config.jwks_url.clone());
     let captcha_secret = config.captcha_secret.clone();
     let rate_limit_state = RateLimitState::new(100, config.trusted_proxies.clone());
 
@@ -47,7 +47,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/health", get(aggregated_health))
         .fallback(any(proxy_handler))
         .layer(from_fn(move |req, next| {
-            jwt_auth(jwt_secret.clone(), captcha_secret.clone(), req, next)
+            jwt_auth(jwks_cache.clone(), captcha_secret.clone(), req, next)
         }))
         .layer(from_fn({
             let rls = rate_limit_state.clone();

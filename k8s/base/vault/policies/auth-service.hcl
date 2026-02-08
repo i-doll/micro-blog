@@ -6,6 +6,10 @@ path "secret/data/blog/admin" {
   capabilities = ["read"]
 }
 
+path "secret/data/blog/rsa-key" {
+  capabilities = ["read"]
+}
+
 path "database/creds/auth-service" {
   capabilities = ["read"]
 }

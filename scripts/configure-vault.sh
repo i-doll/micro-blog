@@ -16,13 +16,18 @@ configure_secrets_and_auth() {
   echo "==> Configuring Vault KV secrets..."
 
   POSTGRES_PASSWORD=$(openssl rand -base64 24)
-  JWT_SECRET=$(openssl rand -hex 32)
   CAPTCHA_SECRET=$(openssl rand -hex 32)
   ADMIN_PASSWORD=$(openssl rand -base64 16)
 
+  # Generate RSA 2048-bit keypair for RS256 JWT signing
+  RSA_PRIVATE_KEY=$(openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 2>/dev/null)
+
   vault_exec kv put secret/blog/shared \
-    JWT_SECRET="$JWT_SECRET" \
     CAPTCHA_SECRET="$CAPTCHA_SECRET"
+
+  # Store RSA private key separately for auth-service
+  vault_exec kv put secret/blog/rsa-key \
+    RSA_PRIVATE_KEY="$RSA_PRIVATE_KEY"
 
   vault_exec kv put secret/blog/admin \
     ADMIN_EMAIL=admin@blog.local \

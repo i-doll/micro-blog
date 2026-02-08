@@ -10,14 +10,8 @@ patches:
   - path: istio-gateway-tls.yaml
   - path: vault-connection-patch.yaml
   - path: nats-tls-patch.yaml
+  - path: istio-cors-patch.yaml
   # Scale up services
-  - target:
-      kind: Deployment
-      name: gateway
-    patch: |
-      - op: replace
-        path: /spec/replicas
-        value: 2
   - target:
       kind: Deployment
       name: user-service

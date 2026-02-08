@@ -6,25 +6,7 @@ metadata:
   namespace: blog
 spec: {}
 ---
-# Allow Istio ingress gateway to reach gateway and frontend
-apiVersion: security.istio.io/v1
-kind: AuthorizationPolicy
-metadata:
-  name: allow-ingress
-  namespace: blog
-spec:
-  selector:
-    matchLabels:
-      app: gateway
-  action: ALLOW
-  rules:
-    - from:
-        - source:
-            principals: ["cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"]
-      to:
-        - operation:
-            ports: ["3000"]
----
+# Allow Istio ingress gateway to reach frontend
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
@@ -43,11 +25,11 @@ spec:
         - operation:
             ports: ["3007"]
 ---
-# Allow gateway to reach all backend services
+# Auth service: public routes + JWT-protected routes
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
-  name: allow-gateway-to-auth
+  name: allow-ingress-to-auth
   namespace: blog
 spec:
   selector:
@@ -55,125 +37,39 @@ spec:
       app: auth-service
   action: ALLOW
   rules:
+    # Allow istiod (no sidecar, no mTLS identity) to fetch JWKS for JWT validation
     - from:
         - source:
-            principals: ["cluster.local/ns/blog/sa/gateway"]
+            notPrincipals: ["*"]
       to:
         - operation:
             ports: ["3009"]
----
-apiVersion: security.istio.io/v1
-kind: AuthorizationPolicy
-metadata:
-  name: allow-gateway-to-user
-  namespace: blog
-spec:
-  selector:
-    matchLabels:
-      app: user-service
-  action: ALLOW
-  rules:
+            paths: ["/auth/.well-known/*"]
+            methods: ["GET"]
+    # Public endpoints (no JWT required)
     - from:
         - source:
-            principals: ["cluster.local/ns/blog/sa/gateway"]
+            principals: ["cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"]
       to:
         - operation:
-            ports: ["3001"]
----
-apiVersion: security.istio.io/v1
-kind: AuthorizationPolicy
-metadata:
-  name: allow-gateway-to-post
-  namespace: blog
-spec:
-  selector:
-    matchLabels:
-      app: post-service
-  action: ALLOW
-  rules:
+            ports: ["3009"]
+            paths: ["/auth/register", "/auth/login", "/auth/refresh", "/auth/.well-known/*", "/auth/system-status"]
+    # Protected endpoints (JWT required via RequestAuthentication)
     - from:
         - source:
-            principals: ["cluster.local/ns/blog/sa/gateway"]
+            principals: ["cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"]
+            requestPrincipals: ["*"]
       to:
         - operation:
-            ports: ["3002"]
+            ports: ["3009"]
+            paths: ["/auth/password"]
+            methods: ["PUT"]
 ---
+# Captcha service: fully public
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
-  name: allow-gateway-to-comment
-  namespace: blog
-spec:
-  selector:
-    matchLabels:
-      app: comment-service
-  action: ALLOW
-  rules:
-    - from:
-        - source:
-            principals: ["cluster.local/ns/blog/sa/gateway"]
-      to:
-        - operation:
-            ports: ["3003"]
----
-apiVersion: security.istio.io/v1
-kind: AuthorizationPolicy
-metadata:
-  name: allow-gateway-to-notification
-  namespace: blog
-spec:
-  selector:
-    matchLabels:
-      app: notification-service
-  action: ALLOW
-  rules:
-    - from:
-        - source:
-            principals: ["cluster.local/ns/blog/sa/gateway"]
-      to:
-        - operation:
-            ports: ["3004"]
----
-apiVersion: security.istio.io/v1
-kind: AuthorizationPolicy
-metadata:
-  name: allow-gateway-to-search
-  namespace: blog
-spec:
-  selector:
-    matchLabels:
-      app: search-query
-  action: ALLOW
-  rules:
-    - from:
-        - source:
-            principals: ["cluster.local/ns/blog/sa/gateway"]
-      to:
-        - operation:
-            ports: ["3005"]
----
-apiVersion: security.istio.io/v1
-kind: AuthorizationPolicy
-metadata:
-  name: allow-gateway-to-media
-  namespace: blog
-spec:
-  selector:
-    matchLabels:
-      app: media-service
-  action: ALLOW
-  rules:
-    - from:
-        - source:
-            principals: ["cluster.local/ns/blog/sa/gateway"]
-      to:
-        - operation:
-            ports: ["3006"]
----
-apiVersion: security.istio.io/v1
-kind: AuthorizationPolicy
-metadata:
-  name: allow-gateway-to-captcha
+  name: allow-ingress-to-captcha
   namespace: blog
 spec:
   selector:
@@ -183,10 +79,159 @@ spec:
   rules:
     - from:
         - source:
-            principals: ["cluster.local/ns/blog/sa/gateway"]
+            principals: ["cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"]
       to:
         - operation:
             ports: ["3008"]
+---
+# Search service: fully public
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-ingress-to-search
+  namespace: blog
+spec:
+  selector:
+    matchLabels:
+      app: search-query
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"]
+      to:
+        - operation:
+            ports: ["3005"]
+---
+# Post service: public reads, JWT-protected writes
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-ingress-to-post
+  namespace: blog
+spec:
+  selector:
+    matchLabels:
+      app: post-service
+  action: ALLOW
+  rules:
+    # Public read access
+    - from:
+        - source:
+            principals: ["cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"]
+      to:
+        - operation:
+            ports: ["3002"]
+            methods: ["GET", "HEAD", "OPTIONS"]
+    # JWT-protected writes
+    - from:
+        - source:
+            principals: ["cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"]
+            requestPrincipals: ["*"]
+      to:
+        - operation:
+            ports: ["3002"]
+            methods: ["POST", "PUT", "DELETE", "PATCH"]
+---
+# Comment service: public reads, JWT-protected writes
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-ingress-to-comment
+  namespace: blog
+spec:
+  selector:
+    matchLabels:
+      app: comment-service
+  action: ALLOW
+  rules:
+    # Public read access
+    - from:
+        - source:
+            principals: ["cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"]
+      to:
+        - operation:
+            ports: ["3003"]
+            methods: ["GET", "HEAD", "OPTIONS"]
+    # JWT-protected writes
+    - from:
+        - source:
+            principals: ["cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"]
+            requestPrincipals: ["*"]
+      to:
+        - operation:
+            ports: ["3003"]
+            methods: ["POST", "PUT", "DELETE"]
+---
+# Media service: public reads, JWT-protected writes
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-ingress-to-media
+  namespace: blog
+spec:
+  selector:
+    matchLabels:
+      app: media-service
+  action: ALLOW
+  rules:
+    # Public read access
+    - from:
+        - source:
+            principals: ["cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"]
+      to:
+        - operation:
+            ports: ["3006"]
+            methods: ["GET", "HEAD", "OPTIONS"]
+    # JWT-protected writes
+    - from:
+        - source:
+            principals: ["cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"]
+            requestPrincipals: ["*"]
+      to:
+        - operation:
+            ports: ["3006"]
+            methods: ["POST", "PUT", "DELETE", "PATCH"]
+---
+# User service: all routes require JWT
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-ingress-to-user
+  namespace: blog
+spec:
+  selector:
+    matchLabels:
+      app: user-service
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"]
+            requestPrincipals: ["*"]
+      to:
+        - operation:
+            ports: ["3001"]
+---
+# Notification service: all routes require JWT
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-ingress-to-notification
+  namespace: blog
+spec:
+  selector:
+    matchLabels:
+      app: notification-service
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"]
+            requestPrincipals: ["*"]
+      to:
+        - operation:
+            ports: ["3004"]
 ---
 # Allow all blog services to reach NATS
 apiVersion: security.istio.io/v1
@@ -239,6 +284,23 @@ spec:
       to:
         - operation:
             ports: ["5432"]
+---
+# Allow auth-service to reach all services for system status health checks
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-auth-health-checks
+  namespace: blog
+spec:
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/blog/sa/auth-service"]
+      to:
+        - operation:
+            methods: ["GET"]
+            paths: ["/health"]
 ---
 # Allow kubelet health probes (no source principal)
 apiVersion: security.istio.io/v1

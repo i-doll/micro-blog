@@ -9,27 +9,151 @@ spec:
   gateways:
     - blog-gateway
   http:
+    # Auth service
     - match:
         - uri:
-            prefix: /api/
+            prefix: /api/auth/
+      rewrite:
+        uri: /auth/
       route:
         - destination:
-            host: gateway
+            host: auth-service
             port:
-              number: 3000
+              number: 3009
       timeout: 30s
-      retries:
-        attempts: 2
-        retryOn: 5xx,reset,connect-failure
+      corsPolicy: &cors
+        allowOrigins:
+          - exact: "http://localhost:3007"
+        allowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        allowHeaders:
+          - content-type
+          - authorization
+          - x-captcha-token
+        allowCredentials: true
+        maxAge: 3600s
+    # Captcha service
+    - match:
+        - uri:
+            prefix: /api/captcha/
+      rewrite:
+        uri: /captcha/
+      route:
+        - destination:
+            host: captcha-service
+            port:
+              number: 3008
+      timeout: 15s
+      corsPolicy: *cors
+    # Search service
+    - match:
+        - uri:
+            prefix: /api/search
+      rewrite:
+        uri: /search
+      route:
+        - destination:
+            host: search-service
+            port:
+              number: 3005
+      timeout: 15s
+      corsPolicy: *cors
+    # Comment service — nested route for posts' comments
+    - match:
+        - uri:
+            prefix: /api/comments/posts/
+      rewrite:
+        uri: /posts/
+      route:
+        - destination:
+            host: comment-service
+            port:
+              number: 3003
+      timeout: 30s
+      corsPolicy: *cors
+    # Comment service
+    - match:
+        - uri:
+            prefix: /api/comments
+      rewrite:
+        uri: /comments
+      route:
+        - destination:
+            host: comment-service
+            port:
+              number: 3003
+      timeout: 30s
+      corsPolicy: *cors
+    # Post service
+    - match:
+        - uri:
+            prefix: /api/posts
+      rewrite:
+        uri: /posts
+      route:
+        - destination:
+            host: post-service
+            port:
+              number: 3002
+      timeout: 30s
+      corsPolicy: *cors
+    # User service
+    - match:
+        - uri:
+            prefix: /api/users
+      rewrite:
+        uri: /users
+      route:
+        - destination:
+            host: user-service
+            port:
+              number: 3001
+      timeout: 30s
+      corsPolicy: *cors
+    # Notification service
+    - match:
+        - uri:
+            prefix: /api/notifications
+      rewrite:
+        uri: /notifications
+      route:
+        - destination:
+            host: notification-service
+            port:
+              number: 3004
+      timeout: 30s
+      corsPolicy: *cors
+    # Media service
+    - match:
+        - uri:
+            prefix: /api/media
+      rewrite:
+        uri: /media
+      route:
+        - destination:
+            host: media-service
+            port:
+              number: 3006
+      timeout: 30s
+      corsPolicy: *cors
+    # System status — aggregated health check
     - match:
         - uri:
             exact: /health
+      rewrite:
+        uri: /auth/system-status
       route:
         - destination:
-            host: gateway
+            host: auth-service
             port:
-              number: 3000
-      timeout: 15s
+              number: 3009
+      timeout: 10s
+      corsPolicy: *cors
+    # Frontend — catch-all
     - route:
         - destination:
             host: frontend

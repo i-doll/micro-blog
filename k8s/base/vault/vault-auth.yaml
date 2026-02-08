@@ -1,19 +1,6 @@
 apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultAuth
 metadata:
-  name: gateway-vault-auth
-  namespace: blog
-spec:
-  vaultConnectionRef: vault-connection
-  method: kubernetes
-  mount: kubernetes
-  kubernetes:
-    role: gateway
-    serviceAccount: gateway
----
-apiVersion: secrets.hashicorp.com/v1beta1
-kind: VaultAuth
-metadata:
   name: auth-service-vault-auth
   namespace: blog
 spec:

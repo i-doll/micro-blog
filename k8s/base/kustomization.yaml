@@ -9,7 +9,6 @@ resources:
   - service-accounts.yaml
   - postgres/statefulset.yaml
   - nats/deployment.yaml
-  - gateway/deployment.yaml
   - auth/deployment.yaml
   - user/deployment.yaml
   - post/deployment.yaml
@@ -24,6 +23,10 @@ resources:
   - istio/peer-authentication.yaml
   - istio/authorization-policies.yaml
   - istio/destination-rules.yaml
+  - istio/request-authentication.yaml
+  - istio/envoy-filter-header-strip.yaml
+  - istio/envoy-filter-rate-limit.yaml
+  - istio/envoy-filter-body-limit.yaml
   - vault/vault-connection.yaml
   - vault/vault-auth.yaml
   - vault/static-secrets.yaml
