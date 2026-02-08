@@ -3,6 +3,10 @@ kind: Kustomization
 
 resources:
   - ../../base
+  - istio-peer-auth-strict.yaml
+  - istio-gateway-tls.yaml
+  - vault-connection-patch.yaml
+  - nats-tls-patch.yaml
 
 patches:
   # Scale up services

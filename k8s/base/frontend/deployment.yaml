@@ -12,7 +12,10 @@ spec:
     metadata:
       labels:
         app: frontend
+      annotations:
+        proxy.istio.io/config: '{"holdApplicationUntilProxyStarts": true}'
     spec:
+      serviceAccountName: frontend
       containers:
         - name: frontend
           image: blog/frontend:dev

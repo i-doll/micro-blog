@@ -1,4 +1,4 @@
-import { connect, NatsConnection, JetStreamClient, JetStreamManager } from 'nats';
+import { connect, NatsConnection, JetStreamClient, JetStreamManager, nkeyAuthenticator } from 'nats';
 import { STREAM_NAME, STREAM_SUBJECTS } from '@blog/shared';
 import { config } from '../config.js';
 
@@ -6,7 +6,12 @@ let nc: NatsConnection;
 let js: JetStreamClient;
 
 export async function connectNats(): Promise<void> {
-  nc = await connect({ servers: config.natsUrl });
+  nc = await connect({
+    servers: config.natsUrl,
+    authenticator: config.natsNkeySeed
+      ? nkeyAuthenticator(new TextEncoder().encode(config.natsNkeySeed))
+      : undefined,
+  });
   console.log(`Connected to NATS at ${config.natsUrl}`);
 
   const jsm: JetStreamManager = await nc.jetstreamManager();

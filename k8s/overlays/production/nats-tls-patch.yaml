@@ -1,0 +1,96 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nats-config
+  namespace: blog
+data:
+  nats.conf: |
+    port: 4222
+    http_port: 8222
+
+    jetstream {
+      store_dir: /data
+    }
+
+    tls {
+      cert_file: /etc/nats/tls/tls.crt
+      key_file: /etc/nats/tls/tls.key
+      ca_file: /etc/nats/tls/ca.crt
+    }
+
+    authorization {
+      users: [
+        {
+          # user-service
+          nkey: "PLACEHOLDER_USER_SERVICE_PUBKEY"
+          permissions: {
+            publish: {
+              allow: ["blog.user.>", "$JS.API.>", "_INBOX.>"]
+            }
+            subscribe: {
+              allow: ["$JS.API.>", "$JS.ACK.>", "_INBOX.>"]
+            }
+          }
+        }
+        {
+          # post-service
+          nkey: "PLACEHOLDER_POST_SERVICE_PUBKEY"
+          permissions: {
+            publish: {
+              allow: ["blog.post.>", "$JS.API.>", "_INBOX.>"]
+            }
+            subscribe: {
+              allow: ["blog.user.deleted", "$JS.API.>", "$JS.ACK.>", "_INBOX.>"]
+            }
+          }
+        }
+        {
+          # comment-service
+          nkey: "PLACEHOLDER_COMMENT_SERVICE_PUBKEY"
+          permissions: {
+            publish: {
+              allow: ["blog.comment.>", "$JS.API.>", "_INBOX.>"]
+            }
+            subscribe: {
+              allow: ["blog.post.deleted", "blog.user.deleted", "$JS.API.>", "$JS.ACK.>", "_INBOX.>"]
+            }
+          }
+        }
+        {
+          # notification-service
+          nkey: "PLACEHOLDER_NOTIFICATION_SERVICE_PUBKEY"
+          permissions: {
+            publish: {
+              allow: ["$JS.API.>", "_INBOX.>"]
+            }
+            subscribe: {
+              allow: ["blog.comment.created", "blog.post.published", "blog.user.deleted", "$JS.API.>", "$JS.ACK.>", "_INBOX.>"]
+            }
+          }
+        }
+        {
+          # search-indexer
+          nkey: "PLACEHOLDER_SEARCH_INDEXER_PUBKEY"
+          permissions: {
+            publish: {
+              allow: ["$JS.API.>", "_INBOX.>"]
+            }
+            subscribe: {
+              allow: ["blog.post.>", "$JS.API.>", "$JS.ACK.>", "_INBOX.>"]
+            }
+          }
+        }
+        {
+          # media-service
+          nkey: "PLACEHOLDER_MEDIA_SERVICE_PUBKEY"
+          permissions: {
+            publish: {
+              allow: ["blog.media.>", "$JS.API.>", "_INBOX.>"]
+            }
+            subscribe: {
+              allow: ["blog.user.deleted", "$JS.API.>", "$JS.ACK.>", "_INBOX.>"]
+            }
+          }
+        }
+      ]
+    }

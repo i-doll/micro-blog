@@ -12,7 +12,10 @@ spec:
     metadata:
       labels:
         app: gateway
+      annotations:
+        proxy.istio.io/config: '{"holdApplicationUntilProxyStarts": true}'
     spec:
+      serviceAccountName: gateway
       containers:
         - name: gateway
           image: blog/gateway:dev
@@ -24,12 +27,12 @@ spec:
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: blog-secrets
+                  name: blog-shared-secrets
                   key: JWT_SECRET
             - name: CAPTCHA_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: blog-secrets
+                  name: blog-shared-secrets
                   key: CAPTCHA_SECRET
           envFrom:
             - configMapRef:

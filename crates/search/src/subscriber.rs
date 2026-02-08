@@ -9,8 +9,21 @@ use blog_shared::{
 
 use crate::index::SearchIndex;
 
-pub async fn subscribe(nats_url: String, index: SearchIndex, fresh_index: bool) -> Result<()> {
-    let client = async_nats::connect(&nats_url).await?;
+pub async fn subscribe(
+    nats_url: String,
+    nats_nkey_seed: Option<String>,
+    index: SearchIndex,
+    fresh_index: bool,
+) -> Result<()> {
+    let client = match &nats_nkey_seed {
+        Some(seed) => {
+            async_nats::ConnectOptions::new()
+                .nkey(seed.clone())
+                .connect(&nats_url)
+                .await?
+        }
+        None => async_nats::connect(&nats_url).await?,
+    };
     let jetstream = jetstream::new(client);
 
     // Ensure stream exists

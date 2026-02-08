@@ -12,7 +12,10 @@ spec:
     metadata:
       labels:
         app: captcha-service
+      annotations:
+        proxy.istio.io/config: '{"holdApplicationUntilProxyStarts": true}'
     spec:
+      serviceAccountName: captcha-service
       containers:
         - name: captcha-service
           image: blog/captcha:dev
@@ -24,7 +27,7 @@ spec:
             - name: CAPTCHA_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: blog-secrets
+                  name: blog-shared-secrets
                   key: CAPTCHA_SECRET
             - name: LOG_LEVEL
               valueFrom:

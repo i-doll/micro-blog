@@ -1,3 +1,94 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nats-config
+  namespace: blog
+data:
+  nats.conf: |
+    port: 4222
+    http_port: 8222
+
+    jetstream {
+      store_dir: /data
+    }
+
+    authorization {
+      users: [
+        {
+          # user-service
+          nkey: "UDKGTVVDDLLUPJCDAM3QRTF5ZGZ33CAJPBNJG642NCLXZFVA5QE6NJL6"
+          permissions: {
+            publish: {
+              allow: ["blog.user.>", "$JS.API.>", "_INBOX.>"]
+            }
+            subscribe: {
+              allow: ["$JS.API.>", "$JS.ACK.>", "_INBOX.>"]
+            }
+          }
+        }
+        {
+          # post-service
+          nkey: "UAKHVLS5SHH5SFMLR73OCTC6YALCIX2NENCGXM6F4U5SNS476AMSWLDV"
+          permissions: {
+            publish: {
+              allow: ["blog.post.>", "$JS.API.>", "_INBOX.>"]
+            }
+            subscribe: {
+              allow: ["blog.user.deleted", "$JS.API.>", "$JS.ACK.>", "_INBOX.>"]
+            }
+          }
+        }
+        {
+          # comment-service
+          nkey: "UAQHZFVP65G7GETUAQQZFKGKVJR7MEVVESJ7VJGSFVATSDUW6S3BSA3K"
+          permissions: {
+            publish: {
+              allow: ["blog.comment.>", "$JS.API.>", "_INBOX.>"]
+            }
+            subscribe: {
+              allow: ["blog.post.deleted", "blog.user.deleted", "$JS.API.>", "$JS.ACK.>", "_INBOX.>"]
+            }
+          }
+        }
+        {
+          # notification-service
+          nkey: "UAUZ3ZB6CUMMC5WNZ3XRCEZMV24VCYDLDWUBXZDSOZFRUPAQBQ22KZNQ"
+          permissions: {
+            publish: {
+              allow: ["$JS.API.>", "_INBOX.>"]
+            }
+            subscribe: {
+              allow: ["blog.comment.created", "blog.post.published", "blog.user.deleted", "$JS.API.>", "$JS.ACK.>", "_INBOX.>"]
+            }
+          }
+        }
+        {
+          # search-indexer
+          nkey: "UC2FY3IE565MTR4QP44LYH3UUQCQNNUJXHKYGLNWYW3BDTCTKIPR5SWI"
+          permissions: {
+            publish: {
+              allow: ["$JS.API.>", "_INBOX.>"]
+            }
+            subscribe: {
+              allow: ["blog.post.>", "$JS.API.>", "$JS.ACK.>", "_INBOX.>"]
+            }
+          }
+        }
+        {
+          # media-service
+          nkey: "UBZEEQVZNL5CF5QGG7JOQITTLWLO2QYIK6ZAIS5ZIGFX7LGEEQLMJQEP"
+          permissions: {
+            publish: {
+              allow: ["blog.media.>", "$JS.API.>", "_INBOX.>"]
+            }
+            subscribe: {
+              allow: ["blog.user.deleted", "$JS.API.>", "$JS.ACK.>", "_INBOX.>"]
+            }
+          }
+        }
+      ]
+    }
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -12,11 +103,15 @@ spec:
     metadata:
       labels:
         app: nats
+      annotations:
+        proxy.istio.io/config: '{"holdApplicationUntilProxyStarts": true}'
+        traffic.sidecar.istio.io/excludeInboundPorts: "4222,8222"
     spec:
+      serviceAccountName: nats
       containers:
         - name: nats
           image: nats:2.10-alpine
-          args: ["--jetstream", "--store_dir", "/data", "-p", "4222", "-m", "8222"]
+          args: ["-c", "/etc/nats/nats.conf"]
           ports:
             - containerPort: 4222
               name: client
@@ -25,6 +120,8 @@ spec:
           volumeMounts:
             - name: natsdata
               mountPath: /data
+            - name: nats-config
+              mountPath: /etc/nats
           readinessProbe:
             httpGet:
               path: /healthz
@@ -34,6 +131,9 @@ spec:
       volumes:
         - name: natsdata
           emptyDir: {}
+        - name: nats-config
+          configMap:
+            name: nats-config
 ---
 apiVersion: v1
 kind: Service

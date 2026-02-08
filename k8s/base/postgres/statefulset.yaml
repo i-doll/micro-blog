@@ -13,7 +13,11 @@ spec:
     metadata:
       labels:
         app: postgres
+      annotations:
+        proxy.istio.io/config: '{"holdApplicationUntilProxyStarts": true}'
+        traffic.sidecar.istio.io/excludeInboundPorts: "5432"
     spec:
+      serviceAccountName: postgres
       containers:
         - name: postgres
           image: postgres:16-alpine
@@ -25,7 +29,7 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: blog-secrets
+                  name: blog-postgres-secrets
                   key: POSTGRES_PASSWORD
           volumeMounts:
             - name: pgdata
@@ -72,25 +76,20 @@ data:
   init-databases.sh: |
     #!/bin/bash
     set -e
+
+    # Grant CREATEROLE so Vault can create dynamic database roles
     psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+      ALTER USER postgres CREATEROLE;
       CREATE DATABASE blog_users;
       CREATE DATABASE blog_posts;
       CREATE DATABASE blog_comments;
       CREATE DATABASE blog_notifications;
       CREATE DATABASE blog_media;
-      CREATE USER user_service WITH PASSWORD 'password';
-      CREATE USER post_service WITH PASSWORD 'password';
-      CREATE USER comment_service WITH PASSWORD 'password';
-      CREATE USER notification_service WITH PASSWORD 'password';
-      CREATE USER media_service WITH PASSWORD 'password';
-      GRANT ALL PRIVILEGES ON DATABASE blog_users TO user_service;
-      GRANT ALL PRIVILEGES ON DATABASE blog_posts TO post_service;
-      GRANT ALL PRIVILEGES ON DATABASE blog_comments TO comment_service;
-      GRANT ALL PRIVILEGES ON DATABASE blog_notifications TO notification_service;
-      GRANT ALL PRIVILEGES ON DATABASE blog_media TO media_service;
     EOSQL
-    for db_user in "blog_users:user_service" "blog_posts:post_service" "blog_comments:comment_service" "blog_notifications:notification_service" "blog_media:media_service"; do
-      db="${db_user%%:*}"
-      user="${db_user##*:}"
-      psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$db" -c "GRANT ALL ON SCHEMA public TO $user;"
+
+    # Grant public schema access in each database so Vault-created roles can use them
+    for db in blog_users blog_posts blog_comments blog_notifications blog_media; do
+      psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$db" <<-EOSQL
+        GRANT ALL ON SCHEMA public TO PUBLIC;
+      EOSQL
     done

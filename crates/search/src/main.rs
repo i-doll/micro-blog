@@ -30,8 +30,11 @@ async fn main() -> anyhow::Result<()> {
 
             let sub_index = search_index.clone();
             let nats_url = config.nats_url.clone();
+            let nats_nkey_seed = config.nats_nkey_seed.clone();
             tokio::spawn(async move {
-                if let Err(e) = subscriber::subscribe(nats_url, sub_index, fresh_index).await {
+                if let Err(e) =
+                    subscriber::subscribe(nats_url, nats_nkey_seed, sub_index, fresh_index).await
+                {
                     tracing::error!("NATS subscriber error: {}", e);
                 }
             });

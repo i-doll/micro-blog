@@ -1,0 +1,238 @@
+# Default deny all traffic in the blog namespace
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: deny-all
+  namespace: blog
+spec: {}
+---
+# Allow Istio ingress gateway to reach gateway and frontend
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-ingress
+  namespace: blog
+spec:
+  selector:
+    matchLabels:
+      app: gateway
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"]
+      to:
+        - operation:
+            ports: ["3000"]
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-ingress-frontend
+  namespace: blog
+spec:
+  selector:
+    matchLabels:
+      app: frontend
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"]
+      to:
+        - operation:
+            ports: ["3007"]
+---
+# Allow gateway to reach all backend services
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-gateway-to-user
+  namespace: blog
+spec:
+  selector:
+    matchLabels:
+      app: user-service
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/blog/sa/gateway"]
+      to:
+        - operation:
+            ports: ["3001"]
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-gateway-to-post
+  namespace: blog
+spec:
+  selector:
+    matchLabels:
+      app: post-service
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/blog/sa/gateway"]
+      to:
+        - operation:
+            ports: ["3002"]
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-gateway-to-comment
+  namespace: blog
+spec:
+  selector:
+    matchLabels:
+      app: comment-service
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/blog/sa/gateway"]
+      to:
+        - operation:
+            ports: ["3003"]
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-gateway-to-notification
+  namespace: blog
+spec:
+  selector:
+    matchLabels:
+      app: notification-service
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/blog/sa/gateway"]
+      to:
+        - operation:
+            ports: ["3004"]
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-gateway-to-search
+  namespace: blog
+spec:
+  selector:
+    matchLabels:
+      app: search-query
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/blog/sa/gateway"]
+      to:
+        - operation:
+            ports: ["3005"]
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-gateway-to-media
+  namespace: blog
+spec:
+  selector:
+    matchLabels:
+      app: media-service
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/blog/sa/gateway"]
+      to:
+        - operation:
+            ports: ["3006"]
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-gateway-to-captcha
+  namespace: blog
+spec:
+  selector:
+    matchLabels:
+      app: captcha-service
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/blog/sa/gateway"]
+      to:
+        - operation:
+            ports: ["3008"]
+---
+# Allow all blog services to reach NATS
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-to-nats
+  namespace: blog
+spec:
+  selector:
+    matchLabels:
+      app: nats
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/blog/sa/user-service"
+              - "cluster.local/ns/blog/sa/post-service"
+              - "cluster.local/ns/blog/sa/comment-service"
+              - "cluster.local/ns/blog/sa/notification-service"
+              - "cluster.local/ns/blog/sa/search-indexer"
+              - "cluster.local/ns/blog/sa/search-query"
+              - "cluster.local/ns/blog/sa/media-service"
+      to:
+        - operation:
+            ports: ["4222", "8222"]
+---
+# Allow DB-connected services to reach PostgreSQL
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-to-postgres
+  namespace: blog
+spec:
+  selector:
+    matchLabels:
+      app: postgres
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/blog/sa/user-service"
+              - "cluster.local/ns/blog/sa/post-service"
+              - "cluster.local/ns/blog/sa/comment-service"
+              - "cluster.local/ns/blog/sa/notification-service"
+              - "cluster.local/ns/blog/sa/media-service"
+      to:
+        - operation:
+            ports: ["5432"]
+---
+# Allow kubelet health probes (no source principal)
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-health-probes
+  namespace: blog
+spec:
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            notPrincipals: ["*"]
+      to:
+        - operation:
+            methods: ["GET"]
+            paths: ["/health", "/healthz"]

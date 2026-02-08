@@ -5,6 +5,7 @@ pub struct Config {
     pub port: u16,
     pub database_url: String,
     pub nats_url: String,
+    pub nats_nkey_seed: Option<String>,
     pub upload_dir: String,
     pub max_file_size: usize,
 }
@@ -19,6 +20,7 @@ impl Config {
             database_url: env::var("DATABASE_URL")
                 .expect("FATAL: Required environment variable DATABASE_URL is not set"),
             nats_url: env::var("NATS_URL").unwrap_or_else(|_| "nats://localhost:4222".to_string()),
+            nats_nkey_seed: env::var("NATS_NKEY_SEED").ok().filter(|s| !s.is_empty()),
             upload_dir: env::var("UPLOAD_DIR").unwrap_or_else(|_| "./uploads".to_string()),
             max_file_size: env::var("MAX_FILE_SIZE_MB")
                 .unwrap_or_else(|_| "10".to_string())

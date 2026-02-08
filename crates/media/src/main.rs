@@ -30,7 +30,15 @@ async fn main() -> anyhow::Result<()> {
     storage.init().await?;
     tracing::info!("Storage initialized at {}", config.upload_dir);
 
-    let nats_client = async_nats::connect(&config.nats_url).await?;
+    let nats_client = match &config.nats_nkey_seed {
+        Some(seed) => {
+            async_nats::ConnectOptions::new()
+                .nkey(seed.clone())
+                .connect(&config.nats_url)
+                .await?
+        }
+        None => async_nats::connect(&config.nats_url).await?,
+    };
     tracing::info!("Connected to NATS at {}", config.nats_url);
 
     // Set up NATS subscriber for user.deleted

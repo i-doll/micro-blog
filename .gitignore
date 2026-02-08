@@ -41,3 +41,6 @@ tantivy_index/
 
 # Coverage
 coverage/
+
+# Downloaded Istio binaries
+istio-*/

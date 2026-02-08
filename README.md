@@ -1,92 +1,96 @@
 # Microservice Blog Platform
 
-A full-stack blog platform built as a distributed microservice architecture — 3 Rust services, 5 TypeScript services, a React SPA frontend, and Kubernetes-native deployment.
+A full-stack blog platform built as a distributed microservice architecture — 3 Rust services, 5 TypeScript services, a React SPA frontend, and Kubernetes-native deployment with Istio service mesh, HashiCorp Vault secrets management, and NKey-authenticated NATS messaging.
 
 ## Architecture
 
 ```
-                                ┌─────────────────────────────────────────────────────────┐
-                                │                     Kubernetes Cluster                   │
-                                │                                                         │
-                                │  ┌───────────────────────────────────────────────────┐  │
-     Browser ─── HTTP ──────────┼──┤            NGINX Ingress Controller               │  │
-                                │  │     /api/* → gateway:3000    /* → frontend:3007    │  │
-                                │  └──────────┬────────────────────────────┬────────────┘  │
-                                │             │                            │               │
-                                │             ▼                            ▼               │
-                                │  ┌─────────────────────┐     ┌────────────────────┐     │
-                                │  │    Gateway (Rust)    │     │  Frontend (React)  │     │
-                                │  │       :3000          │     │      :3007         │     │
-                                │  │                      │     │                    │     │
-                                │  │  • JWT validation    │     │  • Vite + StyleX   │     │
-                                │  │  • Rate limiting     │     │  • React Query     │     │
-                                │  │  • CORS              │     │  • SSR-ready       │     │
-                                │  │  • Request proxying  │     │    Fastify server  │     │
-                                │  └──┬──┬──┬──┬──┬──┬──┘     └────────────────────┘     │
-                                │     │  │  │  │  │  │                                    │
-                        ┌───────┼─────┘  │  │  │  │  └──────────────────┐                 │
-                        │       │  ┌─────┘  │  │  └───────────┐        │                 │
-                        │       │  │  ┌─────┘  └─────┐        │        │                 │
-                        ▼       │  ▼  ▼              ▼        ▼        ▼                 │
-             ┌──────────────┐   │ ┌────────┐ ┌───────────┐ ┌────────┐ ┌──────────┐       │
-             │  User (TS)   │   │ │Post(TS)│ │Comment(TS)│ │Notif   │ │ Captcha  │       │
-             │    :3001     │   │ │ :3002  │ │  :3003    │ │(TS)    │ │  (TS)    │       │
-             │              │   │ │        │ │           │ │ :3004  │ │  :3008   │       │
-             │ • Register   │   │ │• CRUD  │ │• CRUD     │ │        │ │          │       │
-             │ • Login      │   │ │• Slugs │ │• Threaded │ │• Inbox │ │• SVG     │       │
-             │ • Profiles   │   │ │• Drafts│ │           │ │• Poll  │ │  glyphs  │       │
-             │ • Roles      │   │ │• Media │ │           │ │        │ │          │       │
-             └──────┬───────┘   │ └───┬────┘ └─────┬─────┘ └───┬────┘ └──────────┘       │
-                    │           │     │             │           │                          │
-                    │           │     │             │           │                          │
-                    ▼           │     ▼             ▼           ▼                          │
-             ┌──────────┐      │ ┌──────────┐ ┌──────────┐ ┌──────────┐                   │
-             │blog_users│      │ │blog_posts│ │blog_     │ │blog_     │                   │
-             │          │      │ │          │ │comments  │ │notific-  │                   │
-             │   (PG)   │      │ │   (PG)   │ │  (PG)    │ │ations   │                   │
-             └──────────┘      │ └──────────┘ └──────────┘ │  (PG)    │                   │
-                               │                           └──────────┘                   │
-                               │                                                          │
-                               │  ┌──────────────┐    ┌──────────────┐                    │
-                               │  │ Search (Rust)│    │ Media (Rust) │                    │
-                               │  │    :3005     │    │    :3006     │                    │
-                               │  │              │    │              │                    │
-                               │  │  • Tantivy   │    │  • Upload    │                    │
-                               │  │    full-text  │    │  • Resize   │                    │
-                               │  │  • Indexer +  │    │  • Serve    │                    │
-                               │  │    Query mode │    │              │                    │
-                               │  └──────┬───────┘    └──────┬───────┘                    │
-                               │         │                    │                            │
-                               │         ▼                    ▼                            │
-                               │  ┌──────────────┐    ┌──────────────┐                    │
-                               │  │Tantivy Index │    │  blog_media  │                    │
-                               │  │  (on-disk)   │    │    (PG)      │                    │
-                               │  └──────────────┘    └──────────────┘                    │
-                               │                                                          │
-                               │         ┌──────────────────────────┐                     │
-                               │         │    NATS JetStream        │                     │
-                               │         │                          │                     │
-                               │         │  Stream: BLOG_EVENTS     │                     │
-                               │         │  Subjects: blog.>        │                     │
-                               │         │                          │                     │
-                               │         │  blog.user.created       │                     │
-                               │         │  blog.user.updated       │                     │
-                               │         │  blog.user.deleted       │                     │
-                               │         │  blog.post.created       │                     │
-                               │         │  blog.post.updated       │                     │
-                               │         │  blog.post.published     │                     │
-                               │         │  blog.post.deleted       │                     │
-                               │         │  blog.comment.created    │                     │
-                               │         │  blog.comment.deleted    │                     │
-                               │         │  blog.media.uploaded     │                     │
-                               │         │  blog.media.deleted      │                     │
-                               │         └──────────────────────────┘                     │
-                               │              ▲     ▲     ▲     ▲                         │
-                               │              │     │     │     │                         │
-                               │         All services publish & subscribe                 │
-                               │         via durable consumers                            │
-                               │                                                          │
-                               └──────────────────────────────────────────────────────────┘
+                                ┌──────────────────────────────────────────────────────────┐
+                                │                     Kubernetes Cluster                    │
+                                │                                                          │
+                                │  ┌────────────────────────────────────────────────────┐  │
+     Browser ─── HTTP ──────────┼──┤             Istio Ingress Gateway                  │  │
+                                │  │     /api/* → gateway:3000    /* → frontend:3007     │  │
+                                │  └──────────┬─────────────────────────────┬────────────┘  │
+                                │             │          mTLS               │               │
+                                │             ▼                             ▼               │
+                                │  ┌─────────────────────┐     ┌─────────────────────┐     │
+                                │  │    Gateway (Rust)    │     │  Frontend (React)   │     │
+                                │  │       :3000          │     │      :3007          │     │
+                                │  │                      │     │                     │     │
+                                │  │  • JWT validation    │     │  • Vite + StyleX    │     │
+                                │  │  • Rate limiting     │     │  • React Query      │     │
+                                │  │  • CORS              │     │  • SSR-ready        │     │
+                                │  │  • Request proxying  │     │    Fastify server   │     │
+                                │  └──┬──┬──┬──┬──┬──┬──┘     └─────────────────────┘     │
+                                │     │  │  │  │  │  │                                     │
+                        ┌───────┼─────┘  │  │  │  │  └──────────────────┐                  │
+                        │       │  ┌─────┘  │  │  └───────────┐        │                  │
+                        │       │  │  ┌─────┘  └─────┐        │        │                  │
+                        ▼       │  ▼  ▼              ▼        ▼        ▼                  │
+             ┌──────────────┐   │ ┌────────┐ ┌───────────┐ ┌────────┐ ┌──────────┐        │
+             │  User (TS)   │   │ │Post(TS)│ │Comment(TS)│ │Notif   │ │ Captcha  │        │
+             │    :3001     │   │ │ :3002  │ │  :3003    │ │(TS)    │ │  (TS)    │        │
+             │              │   │ │        │ │           │ │ :3004  │ │  :3008   │        │
+             │ • Register   │   │ │• CRUD  │ │• CRUD     │ │        │ │          │        │
+             │ • Login      │   │ │• Slugs │ │• Threaded │ │• Inbox │ │• SVG     │        │
+             │ • Profiles   │   │ │• Drafts│ │           │ │• Poll  │ │  glyphs  │        │
+             │ • Roles      │   │ │• Media │ │           │ │        │ │          │        │
+             └──────┬───────┘   │ └───┬────┘ └─────┬─────┘ └───┬────┘ └──────────┘        │
+                    │           │     │             │           │                           │
+                    ▼           │     ▼             ▼           ▼                           │
+             ┌──────────┐      │ ┌──────────┐ ┌──────────┐ ┌──────────┐                    │
+             │blog_users│      │ │blog_posts│ │blog_     │ │blog_     │                    │
+             │   (PG)   │      │ │   (PG)   │ │comments  │ │notific-  │                    │
+             └──────────┘      │ └──────────┘ │  (PG)    │ │ations   │                    │
+                               │              └──────────┘ │  (PG)    │                    │
+                               │                           └──────────┘                    │
+                               │                                                           │
+                               │  ┌──────────────┐    ┌──────────────┐                     │
+                               │  │ Search (Rust)│    │ Media (Rust) │                     │
+                               │  │    :3005     │    │    :3006     │                     │
+                               │  │              │    │              │                     │
+                               │  │  • Tantivy   │    │  • Upload    │                     │
+                               │  │    full-text  │    │  • Resize   │                     │
+                               │  │  • Indexer +  │    │  • Serve    │                     │
+                               │  │    Query mode │    │              │                     │
+                               │  └──────┬───────┘    └──────┬───────┘                     │
+                               │         │                    │                             │
+                               │         ▼                    ▼                             │
+                               │  ┌──────────────┐    ┌──────────────┐                     │
+                               │  │Tantivy Index │    │  blog_media  │                     │
+                               │  │  (on-disk)   │    │    (PG)      │                     │
+                               │  └──────────────┘    └──────────────┘                     │
+                               │                                                           │
+                               │         ┌──────────────────────────┐                      │
+                               │         │  NATS JetStream (NKey)   │                      │
+                               │         │                          │                      │
+                               │         │  Stream: BLOG_EVENTS     │                      │
+                               │         │  Per-service NKey auth   │                      │
+                               │         │  Pub/sub permissions     │                      │
+                               │         └──────────────────────────┘                      │
+                               │              ▲     ▲     ▲     ▲                          │
+                               │              │     │     │     │                          │
+                               │         All services publish & subscribe                  │
+                               │         via durable consumers                             │
+                               │                                                           │
+                               │  ┌──────────────────────────────────────────────────────┐ │
+                               │  │                  Security Layer                      │ │
+                               │  │                                                      │ │
+                               │  │  Istio ─── mTLS between all pods (sidecar proxy)     │ │
+                               │  │            AuthorizationPolicies (deny-by-default)   │ │
+                               │  │            Circuit breakers + outlier detection       │ │
+                               │  │                                                      │ │
+                               │  │  Vault ─── Dynamic PostgreSQL credentials (1h TTL)   │ │
+                               │  │            KV secrets (JWT, admin, captcha)           │ │
+                               │  │            Kubernetes auth (ServiceAccount-bound)     │ │
+                               │  │            VSO syncs secrets to K8s Secrets           │ │
+                               │  │                                                      │ │
+                               │  │  NATS ──── NKey (Ed25519) per-service authentication │ │
+                               │  │            Scoped publish/subscribe permissions       │ │
+                               │  └──────────────────────────────────────────────────────┘ │
+                               │                                                           │
+                               └───────────────────────────────────────────────────────────┘
 ```
 
 ## Services
@@ -113,6 +117,12 @@ A full-stack blog platform built as a distributed microservice architecture — 
 
 **Infrastructure:** PostgreSQL 16, NATS 2.10 (JetStream), Docker (BuildKit), Kubernetes, Skaffold, Kind
 
+**Service Mesh:** Istio (mTLS, AuthorizationPolicies, Gateway/VirtualService, DestinationRules)
+
+**Secrets:** HashiCorp Vault + Vault Secrets Operator (dynamic DB creds, KV secrets, Kubernetes auth)
+
+**NATS Security:** Ed25519 NKey authentication with per-service publish/subscribe permissions
+
 ## Gateway Routing
 
 All external API requests go through the gateway at `/api/*`:
@@ -131,23 +141,23 @@ The gateway validates JWTs on all routes except `POST /api/auth/register` and `P
 
 ## Event Bus
 
-Services communicate asynchronously via NATS JetStream on stream `BLOG_EVENTS` with subject pattern `blog.>`:
+Services communicate asynchronously via NATS JetStream on stream `BLOG_EVENTS` with subject pattern `blog.>`. Each service authenticates with an Ed25519 NKey and is restricted to its own publish/subscribe permissions:
 
 | Subject | Published By | Consumed By |
 |---|---|---|
 | `blog.user.created` | user | notification |
 | `blog.user.updated` | user | — |
-| `blog.user.deleted` | user | notification |
+| `blog.user.deleted` | user | post, comment, notification, media |
 | `blog.post.created` | post | search, notification |
 | `blog.post.updated` | post | search |
 | `blog.post.published` | post | search, notification |
-| `blog.post.deleted` | post | search, notification |
+| `blog.post.deleted` | post | search, comment, notification |
 | `blog.comment.created` | comment | notification |
 | `blog.comment.deleted` | comment | — |
 | `blog.media.uploaded` | media | — |
 | `blog.media.deleted` | media | — |
 
-Each consumer is durable and named after its service (e.g., `search-service`).
+Each consumer is durable and named after its service (e.g., `search-service`). NKey seeds are stored in Vault and injected via VSO as Kubernetes Secrets.
 
 ## Getting Started
 
@@ -157,6 +167,7 @@ Each consumer is durable and named after its service (e.g., `search-service`).
 - Node.js 22+
 - Rust 1.92+ (for local dev)
 - Kind + kubectl + Skaffold (for K8s deployment)
+- Helm 3 (for Vault + VSO installation)
 
 ### Quick Start (Docker Compose)
 
@@ -165,7 +176,7 @@ cp .env.example .env          # Configure secrets
 docker compose up --build     # Build and start everything
 ```
 
-The frontend will be available at `http://localhost:3007` and the API at `http://localhost:3000`.
+The frontend will be available at `http://localhost:3007` and the API at `http://localhost:3000`. Docker Compose mode does not use Istio, Vault, or NATS NKey auth — secrets are read from `.env` and NATS runs without authentication.
 
 ### Local Development
 
@@ -191,10 +202,21 @@ cargo run -p blog-media
 ### Kubernetes (Kind)
 
 ```bash
-./scripts/kind-setup.sh       # Create cluster, build images, deploy
+./scripts/kind-setup.sh       # Create cluster, build images, deploy everything
 skaffold dev                  # Dev loop with hot reload
 ./scripts/kind-teardown.sh    # Tear down cluster
 ```
+
+`kind-setup.sh` handles the full bootstrap:
+
+1. Creates a Kind cluster (deletes existing one if present)
+2. Builds and loads all Docker images
+3. Installs Istio service mesh (minimal profile, NodePort ingress)
+4. Installs Vault (dev mode) and Vault Secrets Operator via Helm
+5. Seeds Vault with secrets (JWT, admin, postgres password) and configures Kubernetes auth
+6. Generates NATS NKey pairs (seeds in Vault, public keys in NATS config)
+7. Deploys the blog platform via Kustomize
+8. Configures Vault database engine with per-service dynamic credentials
 
 Kind deployments use the `:dev` image tag. When manually building and loading images:
 
@@ -223,13 +245,23 @@ kubectl rollout restart deployment/frontend -n blog
 │   └── shared/                 #   Shared TS types, NATS subjects, DB helpers
 ├── k8s/
 │   ├── base/                   #   Base Kustomize manifests
+│   │   ├── istio/              #     Istio Gateway, VirtualService, AuthPolicies, etc.
+│   │   ├── vault/              #     VSO CRDs (VaultAuth, Static/DynamicSecrets)
+│   │   │   └── policies/       #       Per-service Vault HCL policies
+│   │   ├── nats/               #     NATS deployment with NKey auth config
+│   │   ├── postgres/           #     PostgreSQL StatefulSet + init scripts
+│   │   └── <service>/          #     Per-service deployments
 │   └── overlays/
 │       ├── dev/                #   Dev overlay (debug logging)
-│       └── production/         #   Production overlay (replicas, resource limits)
+│       └── production/         #   Production overlay (STRICT mTLS, HTTPS, NATS TLS)
 ├── scripts/
-│   ├── init-databases.sql      #   PostgreSQL init (creates DBs + service users)
-│   ├── kind-setup.sh           #   Kind cluster bootstrap
+│   ├── kind-setup.sh           #   Kind cluster full bootstrap
 │   ├── kind-teardown.sh        #   Kind cluster teardown
+│   ├── install-istio.sh        #   Install Istio via istioctl
+│   ├── install-vault.sh        #   Install Vault + VSO via Helm
+│   ├── configure-vault.sh      #   Seed Vault: KV secrets, auth, DB engine
+│   ├── generate-nats-nkeys.sh  #   Generate NKey pairs, store in Vault
+│   ├── init-databases.sql      #   PostgreSQL init (creates DBs, for docker-compose)
 │   └── migrate-all.sh          #   Run all DB migrations
 ├── Cargo.toml                  # Rust workspace root
 ├── package.json                # Node workspace root
@@ -253,11 +285,49 @@ All Dockerfiles use BuildKit syntax with cache mounts for fast rebuilds:
 |---|---|---|
 | `DATABASE_URL` | user, post, comment, notification, media | PostgreSQL connection string |
 | `NATS_URL` | all except frontend, captcha | NATS server URL |
+| `NATS_NKEY_SEED` | user, post, comment, notification, search, media | Ed25519 NKey seed for NATS auth |
 | `JWT_SECRET` | gateway, user | HS256 JWT signing secret |
 | `CAPTCHA_SECRET` | gateway, captcha | HMAC secret for captcha tokens |
 | `CORS_ORIGINS` | gateway, user, captcha | Allowed CORS origins |
 | `PORT` | all | Service listen port |
 | `LOG_LEVEL` | all | Log level (`debug`, `info`, `warn`, `error`) |
+
+In Kubernetes, `DATABASE_URL` is provided by Vault dynamic credentials (rotated hourly), `JWT_SECRET`/`CAPTCHA_SECRET` come from Vault KV, and `NATS_NKEY_SEED` comes from Vault KV — all synced to Kubernetes Secrets by the Vault Secrets Operator.
+
+## Security
+
+### Istio Service Mesh
+
+All pods in the `blog` namespace run with an Istio Envoy sidecar. Traffic between services is encrypted with mutual TLS.
+
+- **PeerAuthentication**: PERMISSIVE in dev (allows plaintext during migration), STRICT in production
+- **AuthorizationPolicies**: Deny-by-default with explicit allow rules per service-to-service path (e.g., only the gateway ServiceAccount can reach backend services)
+- **DestinationRules**: Connection pool limits (100 max connections) and outlier detection (eject after 5 consecutive 5xx errors)
+- **Gateway + VirtualService**: Replaces NGINX Ingress for routing `/api/*` and `/*` traffic
+
+### HashiCorp Vault
+
+Secrets are managed by Vault and synced to Kubernetes via the Vault Secrets Operator (CRD-based, no sidecar injector).
+
+- **Static secrets** (KV v2): `JWT_SECRET`, `CAPTCHA_SECRET`, admin credentials, postgres password
+- **Dynamic secrets** (database engine): Per-service PostgreSQL credentials with 1h TTL and automatic rotation. Each service gets its own Vault database config connected to its specific database, so grants execute in the correct schema context.
+- **NATS NKey seeds**: Stored in Vault KV, synced to per-service Kubernetes Secrets
+- **Kubernetes auth**: Each service authenticates to Vault via its ServiceAccount, scoped to a least-privilege Vault policy
+
+### NATS NKey Authentication
+
+Each service connecting to NATS authenticates with an Ed25519 NKey pair. The NATS server config enforces per-service publish/subscribe permissions:
+
+| Service | Can Publish | Can Subscribe |
+|---|---|---|
+| user-service | `blog.user.>` | JetStream only |
+| post-service | `blog.post.>` | `blog.user.deleted` |
+| comment-service | `blog.comment.>` | `blog.post.deleted`, `blog.user.deleted` |
+| notification-service | — | `blog.comment.created`, `blog.post.published`, `blog.user.deleted` |
+| search-indexer | — | `blog.post.>` |
+| media-service | `blog.media.>` | `blog.user.deleted` |
+
+NKey pairs are generated by `scripts/generate-nats-nkeys.sh` using the `nk` tool (via `natsio/nats-box` Docker image). Seeds are stored in Vault; public keys are written into the NATS server ConfigMap.
 
 ## CI
 

@@ -10,6 +10,7 @@ pub enum ServiceMode {
 pub struct Config {
     pub port: u16,
     pub nats_url: String,
+    pub nats_nkey_seed: Option<String>,
     pub index_path: String,
     pub mode: ServiceMode,
 }
@@ -30,6 +31,7 @@ impl Config {
                 .parse()
                 .expect("PORT must be a number"),
             nats_url: env::var("NATS_URL").unwrap_or_else(|_| "nats://localhost:4222".to_string()),
+            nats_nkey_seed: env::var("NATS_NKEY_SEED").ok().filter(|s| !s.is_empty()),
             index_path: env::var("INDEX_PATH").unwrap_or_else(|_| "./tantivy_index".to_string()),
             mode,
         }

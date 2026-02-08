@@ -6,8 +6,7 @@ namespace: blog
 resources:
   - namespace.yaml
   - configmap.yaml
-  - secrets.yaml
-  - ingress.yaml
+  - service-accounts.yaml
   - postgres/statefulset.yaml
   - nats/deployment.yaml
   - gateway/deployment.yaml
@@ -19,3 +18,13 @@ resources:
   - media/deployment.yaml
   - captcha/deployment.yaml
   - frontend/deployment.yaml
+  - istio/gateway.yaml
+  - istio/virtual-service.yaml
+  - istio/peer-authentication.yaml
+  - istio/authorization-policies.yaml
+  - istio/destination-rules.yaml
+  - vault/vault-connection.yaml
+  - vault/vault-auth.yaml
+  - vault/static-secrets.yaml
+  - vault/dynamic-secrets.yaml
+  - vault/nats-secrets.yaml
