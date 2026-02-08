@@ -10,6 +10,7 @@ resources:
   - postgres/statefulset.yaml
   - nats/deployment.yaml
   - gateway/deployment.yaml
+  - auth/deployment.yaml
   - user/deployment.yaml
   - post/deployment.yaml
   - comment/deployment.yaml

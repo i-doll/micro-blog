@@ -20,6 +20,24 @@ spec:
 apiVersion: networking.istio.io/v1
 kind: DestinationRule
 metadata:
+  name: auth-service
+  namespace: blog
+spec:
+  host: auth-service
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 100
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
   name: user-service
   namespace: blog
 spec:

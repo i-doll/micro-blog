@@ -56,6 +56,7 @@ configure_secrets_and_auth() {
 
   declare -A SERVICE_POLICIES=(
     ["gateway"]="gateway-policy"
+    ["auth-service"]="auth-service-policy"
     ["user-service"]="user-service-policy"
     ["post-service"]="post-service-policy"
     ["comment-service"]="comment-service-policy"
@@ -92,6 +93,7 @@ configure_database_engine() {
     --timeout=120s
 
   declare -A SERVICE_DBS=(
+    ["auth-service"]="blog_auth"
     ["user-service"]="blog_users"
     ["post-service"]="blog_posts"
     ["comment-service"]="blog_comments"

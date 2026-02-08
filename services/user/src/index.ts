@@ -5,9 +5,8 @@ import { ZodError } from 'zod';
 import { config } from './config.js';
 import { runMigrations } from './db/migrate.js';
 import { connectNats, disconnectNats } from './services/nats.js';
-import { authRoutes } from './routes/auth.js';
 import { userRoutes } from './routes/users.js';
-import { bootstrapAdmin } from './services/auth.js';
+import { subscribeUserCreated } from './subscribers/user-created.js';
 
 const app = Fastify({ logger: { level: config.logLevel } });
 
@@ -29,14 +28,13 @@ app.setErrorHandler((error, request, reply) => {
 app.get('/health', async () => ({ status: 'healthy', service: 'user-service' }));
 
 // Routes
-await app.register(authRoutes);
 await app.register(userRoutes);
 
 // Start
 try {
   await runMigrations();
-  await bootstrapAdmin();
   await connectNats();
+  await subscribeUserCreated();
   await app.listen({ port: config.port, host: '0.0.0.0' });
   console.log(`User service listening on port ${config.port}`);
 } catch (err) {

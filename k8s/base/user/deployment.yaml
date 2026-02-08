@@ -37,11 +37,6 @@ spec:
                 secretKeyRef:
                   name: user-service-db-creds
                   key: DATABASE_URL
-            - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: blog-shared-secrets
-                  key: JWT_SECRET
             - name: NATS_URL
               valueFrom:
                 configMapKeyRef:
@@ -52,21 +47,6 @@ spec:
                 configMapKeyRef:
                   name: blog-config
                   key: LOG_LEVEL
-            - name: ADMIN_EMAIL
-              valueFrom:
-                secretKeyRef:
-                  name: blog-admin-secrets
-                  key: ADMIN_EMAIL
-            - name: ADMIN_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: blog-admin-secrets
-                  key: ADMIN_PASSWORD
-            - name: ADMIN_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: blog-admin-secrets
-                  key: ADMIN_USERNAME
             - name: NATS_NKEY_SEED
               valueFrom:
                 secretKeyRef:

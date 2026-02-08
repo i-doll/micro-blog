@@ -7,6 +7,7 @@ pub struct Config {
     pub jwt_secret: String,
     pub cors_origins: Vec<String>,
     pub trusted_proxies: Vec<IpAddr>,
+    pub auth_service_url: String,
     pub user_service_url: String,
     pub post_service_url: String,
     pub comment_service_url: String,
@@ -39,6 +40,8 @@ impl Config {
                 .filter(|s| !s.is_empty())
                 .filter_map(|s| s.parse::<IpAddr>().ok())
                 .collect(),
+            auth_service_url: env::var("AUTH_SERVICE_URL")
+                .unwrap_or_else(|_| "http://localhost:3009".to_string()),
             user_service_url: env::var("USER_SERVICE_URL")
                 .unwrap_or_else(|_| "http://localhost:3001".to_string()),
             post_service_url: env::var("POST_SERVICE_URL")

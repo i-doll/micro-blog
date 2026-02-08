@@ -25,13 +25,19 @@ pub struct UserCreated {
     pub user_id: Uuid,
     pub username: String,
     pub email: String,
+    #[serde(default)]
+    pub role: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserUpdated {
     pub user_id: Uuid,
     pub username: Option<String>,
+    #[serde(default)]
+    pub email: Option<String>,
     pub bio: Option<String>,
+    #[serde(default)]
+    pub role: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

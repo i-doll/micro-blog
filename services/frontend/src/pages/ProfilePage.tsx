@@ -181,7 +181,6 @@ export function ProfilePage() {
     }
     try {
       await changePasswordMutation.mutateAsync({
-        id: user!.id,
         currentPassword,
         newPassword,
       });

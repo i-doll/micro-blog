@@ -9,7 +9,6 @@ export async function runMigrations() {
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       username VARCHAR(50) NOT NULL UNIQUE,
       email VARCHAR(255) NOT NULL UNIQUE,
-      password_hash VARCHAR(255) NOT NULL,
       bio TEXT DEFAULT '',
       role VARCHAR(20) NOT NULL DEFAULT 'user',
       active BOOLEAN NOT NULL DEFAULT true,
@@ -17,15 +16,9 @@ export async function runMigrations() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
-  await sql`
-    CREATE TABLE IF NOT EXISTS refresh_tokens (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      token VARCHAR(500) NOT NULL UNIQUE,
-      expires_at TIMESTAMPTZ NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `;
+  // Clean up auth columns/tables that have moved to auth-service
+  await sql`DROP TABLE IF EXISTS refresh_tokens`;
+  await sql`ALTER TABLE users DROP COLUMN IF EXISTS password_hash`;
   console.log('Schema ready');
   await sql.end();
 }

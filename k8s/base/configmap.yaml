@@ -5,6 +5,7 @@ metadata:
   namespace: blog
 data:
   NATS_URL: "nats://nats:4222"
+  AUTH_SERVICE_URL: "http://auth-service:3009"
   USER_SERVICE_URL: "http://user-service:3001"
   POST_SERVICE_URL: "http://post-service:3002"
   COMMENT_SERVICE_URL: "http://comment-service:3003"

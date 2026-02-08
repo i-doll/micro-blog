@@ -32,6 +32,29 @@ services:
       retries: 5
       start_period: 5s
 
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth/Dockerfile
+      network: host
+    ports:
+      - "3009:3009"
+    environment:
+      PORT: "3009"
+      DATABASE_URL: "postgresql://auth_service:${POSTGRES_PASSWORD}@postgres:5432/blog_auth"
+      NATS_URL: "nats://nats:4222"
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      LOG_LEVEL: "info"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+
   user-service:
     build:
       context: .
@@ -43,7 +66,6 @@ services:
       PORT: "3001"
       DATABASE_URL: "postgresql://user_service:${POSTGRES_PASSWORD}@postgres:5432/blog_users"
       NATS_URL: "nats://nats:4222"
-      JWT_SECRET: ${JWT_SECRET}
       CORS_ORIGINS: ${CORS_ORIGINS}
       LOG_LEVEL: "info"
     depends_on:
@@ -189,6 +211,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       CAPTCHA_SECRET: ${CAPTCHA_SECRET}
       CORS_ORIGINS: ${CORS_ORIGINS}
+      AUTH_SERVICE_URL: "http://auth-service:3009"
       USER_SERVICE_URL: "http://user-service:3001"
       POST_SERVICE_URL: "http://post-service:3002"
       COMMENT_SERVICE_URL: "http://comment-service:3003"
@@ -197,6 +220,7 @@ services:
       MEDIA_SERVICE_URL: "http://media-service:3006"
       CAPTCHA_SERVICE_URL: "http://captcha-service:3008"
     depends_on:
+      - auth-service
       - user-service
       - post-service
       - comment-service

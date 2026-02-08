@@ -83,7 +83,9 @@ pub async fn proxy_handler(
 
 fn route_to_service(path: &str, config: &Config) -> Option<(String, String)> {
     let rest = path.strip_prefix("/api")?;
-    let base = if rest.starts_with("/auth") || rest.starts_with("/users") {
+    let base = if rest.starts_with("/auth") {
+        &config.auth_service_url
+    } else if rest.starts_with("/users") {
         &config.user_service_url
     } else if rest.starts_with("/posts") {
         &config.post_service_url

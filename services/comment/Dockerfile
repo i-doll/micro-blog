@@ -3,6 +3,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY services/shared/package.json services/shared/
+COPY services/auth/package.json services/auth/
 COPY services/user/package.json services/user/
 COPY services/post/package.json services/post/
 COPY services/comment/package.json services/comment/

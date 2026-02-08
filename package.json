@@ -3,6 +3,7 @@
   "private": true,
   "workspaces": [
     "services/shared",
+    "services/auth",
     "services/user",
     "services/post",
     "services/comment",
@@ -12,6 +13,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces",
+    "dev:auth": "npm run dev --workspace=services/auth",
     "dev:user": "npm run dev --workspace=services/user",
     "dev:post": "npm run dev --workspace=services/post",
     "dev:comment": "npm run dev --workspace=services/comment",

@@ -15,20 +15,32 @@ data:
     authorization {
       users: [
         {
+          # auth-service
+          nkey: "UAMIISEKNX4O5YTPY6FD4PH3Y5PGLNUONEUG5HUJTK7R3QF6VZ73IWKH"
+          permissions: {
+            publish: {
+              allow: ["blog.user.created", "$JS.API.>", "_INBOX.>"]
+            }
+            subscribe: {
+              allow: ["blog.user.updated", "blog.user.deleted", "$JS.API.>", "$JS.ACK.>", "_INBOX.>"]
+            }
+          }
+        }
+        {
           # user-service
-          nkey: "UDKGTVVDDLLUPJCDAM3QRTF5ZGZ33CAJPBNJG642NCLXZFVA5QE6NJL6"
+          nkey: "UAVYOZGHOPTQGX3PXLLRWKNNMDC32LNYBBYD4IF6D6A3O6FAOTFDYG2A"
           permissions: {
             publish: {
               allow: ["blog.user.>", "$JS.API.>", "_INBOX.>"]
             }
             subscribe: {
-              allow: ["$JS.API.>", "$JS.ACK.>", "_INBOX.>"]
+              allow: ["blog.user.created", "$JS.API.>", "$JS.ACK.>", "_INBOX.>"]
             }
           }
         }
         {
           # post-service
-          nkey: "UAKHVLS5SHH5SFMLR73OCTC6YALCIX2NENCGXM6F4U5SNS476AMSWLDV"
+          nkey: "UC67VCEMMBATNDXPUR5YDEARDVTEE433XJZDHUJSEWSX7DM2GULAP5ZY"
           permissions: {
             publish: {
               allow: ["blog.post.>", "$JS.API.>", "_INBOX.>"]
@@ -40,7 +52,7 @@ data:
         }
         {
           # comment-service
-          nkey: "UAQHZFVP65G7GETUAQQZFKGKVJR7MEVVESJ7VJGSFVATSDUW6S3BSA3K"
+          nkey: "UDTA4HJAUPHDS7XXFVTKTWJZVF6RXCHCS5FKBRNUSJFDHZQ6WVNVLWMI"
           permissions: {
             publish: {
               allow: ["blog.comment.>", "$JS.API.>", "_INBOX.>"]
@@ -52,7 +64,7 @@ data:
         }
         {
           # notification-service
-          nkey: "UAUZ3ZB6CUMMC5WNZ3XRCEZMV24VCYDLDWUBXZDSOZFRUPAQBQ22KZNQ"
+          nkey: "UBHCHX5UEXCC4QIPYPQCN6JKY5MFJMRK2TIDASKKMJ65ALYT7GICZIPC"
           permissions: {
             publish: {
               allow: ["$JS.API.>", "_INBOX.>"]
@@ -64,7 +76,7 @@ data:
         }
         {
           # search-indexer
-          nkey: "UC2FY3IE565MTR4QP44LYH3UUQCQNNUJXHKYGLNWYW3BDTCTKIPR5SWI"
+          nkey: "UDTYUYWKTR7A533TXNI7BMGZZN4KQ5554UJOGY5YFUU6H264LKGIVUP3"
           permissions: {
             publish: {
               allow: ["$JS.API.>", "_INBOX.>"]
@@ -76,7 +88,7 @@ data:
         }
         {
           # media-service
-          nkey: "UBZEEQVZNL5CF5QGG7JOQITTLWLO2QYIK6ZAIS5ZIGFX7LGEEQLMJQEP"
+          nkey: "UAXAA7OUZRLX24POWBZ5T6ITUDR343NRBU72R43J7JZOKYMFL2PYW6AH"
           permissions: {
             publish: {
               allow: ["blog.media.>", "$JS.API.>", "_INBOX.>"]

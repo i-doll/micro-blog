@@ -23,6 +23,11 @@ build:
       docker:
         dockerfile: crates/media/Dockerfile
         network: host
+    - image: blog/auth
+      context: .
+      docker:
+        dockerfile: services/auth/Dockerfile
+        network: host
     - image: blog/user
       context: .
       docker:

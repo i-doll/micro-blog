@@ -58,13 +58,20 @@ export async function updateUserRole(id: string, role: string) {
       updated_at: schema.users.updated_at,
     });
 
+  // Publish user.updated event with role change
+  const js = getJetStream();
+  const event = createEnvelope<UserUpdated>({
+    user_id: updated.id,
+    role: updated.role,
+  });
+  await js.publish(USER_UPDATED, sc.encode(JSON.stringify(event)));
+
   return updated;
 }
 
 export async function getUserById(id: string) {
   const user = await db.query.users.findFirst({
     where: (users, { eq }) => eq(users.id, id),
-    columns: { password_hash: false },
   });
   if (!user) throw new NotFoundError('User');
   return user;
@@ -95,6 +102,7 @@ export async function updateUser(id: string, data: { username?: string; email?: 
   const event = createEnvelope<UserUpdated>({
     user_id: updated.id,
     username: data.username,
+    email: data.email,
     bio: data.bio,
   });
   await js.publish(USER_UPDATED, sc.encode(JSON.stringify(event)));

@@ -18,7 +18,7 @@ generate_nkey() {
     'SEED=$(nk -gen user) && echo "$SEED" > /tmp/seed.nk && echo "$SEED" && nk -inkey /tmp/seed.nk -pubout'
 }
 
-SERVICES=("user-service" "post-service" "comment-service" "notification-service" "search-indexer" "media-service")
+SERVICES=("auth-service" "user-service" "post-service" "comment-service" "notification-service" "search-indexer" "media-service")
 
 echo "==> Generating NATS NKey pairs and storing in Vault..."
 

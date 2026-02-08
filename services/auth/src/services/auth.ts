@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
-import { eq, and, gt } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db, schema } from '../db/index.js';
 import { config } from '../config.js';
 import { getJetStream } from './nats.js';
@@ -19,52 +19,53 @@ import { StringCodec } from 'nats';
 const sc = StringCodec();
 
 export async function register(username: string, email: string, password: string) {
-  // Check for existing user
-  const existing = await db.query.users.findFirst({
-    where: (users, { or, eq }) => or(eq(users.email, email), eq(users.username, username)),
+  // Check for existing credentials
+  const existing = await db.query.credentials.findFirst({
+    where: (creds, { or, eq }) => or(eq(creds.email, email), eq(creds.username, username)),
   });
   if (existing) {
     throw new ConflictError('User with this email or username already exists');
   }
 
   const password_hash = await bcrypt.hash(password, 12);
-  const role = assignRegistrationRole(email);
-  const [user] = await db.insert(schema.users).values({
+  const role = 'user';
+  const [cred] = await db.insert(schema.credentials).values({
     username,
     email,
     password_hash,
     role,
   }).returning();
 
-  // Publish user.created event
+  // Publish user.created event so user-service creates a profile
   const js = getJetStream();
   const event = createEnvelope<UserCreated>({
-    user_id: user.id,
-    username: user.username,
-    email: user.email,
+    user_id: cred.id,
+    username: cred.username,
+    email: cred.email,
+    role: cred.role,
   });
   await js.publish(USER_CREATED, sc.encode(JSON.stringify(event)));
 
-  return { id: user.id, username: user.username, email: user.email, role: user.role };
+  return { id: cred.id, username: cred.username, email: cred.email, role: cred.role };
 }
 
 export async function login(email: string, password: string) {
-  const user = await db.query.users.findFirst({
-    where: (users, { eq }) => eq(users.email, email),
+  const cred = await db.query.credentials.findFirst({
+    where: (creds, { eq }) => eq(creds.email, email),
   });
-  if (!user || !user.active) {
+  if (!cred || !cred.active) {
     throw new UnauthorizedError('Invalid credentials');
   }
 
-  const valid = await bcrypt.compare(password, user.password_hash);
+  const valid = await bcrypt.compare(password, cred.password_hash);
   if (!valid) {
     throw new UnauthorizedError('Invalid credentials');
   }
 
   const claims: JwtClaims = {
-    sub: user.id,
-    username: user.username,
-    role: user.role,
+    sub: cred.id,
+    username: cred.username,
+    role: cred.role,
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + config.jwtExpiryHours * 3600,
   };
@@ -76,7 +77,7 @@ export async function login(email: string, password: string) {
   const expiresAt = new Date(Date.now() + config.refreshTokenExpiryDays * 24 * 3600 * 1000);
 
   await db.insert(schema.refreshTokens).values({
-    user_id: user.id,
+    user_id: cred.id,
     token: refreshToken,
     expires_at: expiresAt,
   });
@@ -84,7 +85,7 @@ export async function login(email: string, password: string) {
   return {
     access_token,
     refresh_token: refreshToken,
-    user: { id: user.id, username: user.username, email: user.email, role: user.role },
+    user: { id: cred.id, username: cred.username, email: cred.email, role: cred.role },
   };
 }
 
@@ -98,11 +99,11 @@ export async function refresh(refreshToken: string) {
     throw new UnauthorizedError('Invalid or expired refresh token');
   }
 
-  const user = await db.query.users.findFirst({
-    where: (users, { eq }) => eq(users.id, tokenRow.user_id),
+  const cred = await db.query.credentials.findFirst({
+    where: (creds, { eq }) => eq(creds.id, tokenRow.user_id),
   });
 
-  if (!user || !user.active) {
+  if (!cred || !cred.active) {
     throw new UnauthorizedError('User not found or inactive');
   }
 
@@ -110,9 +111,9 @@ export async function refresh(refreshToken: string) {
   await db.delete(schema.refreshTokens).where(eq(schema.refreshTokens.id, tokenRow.id));
 
   const claims: JwtClaims = {
-    sub: user.id,
-    username: user.username,
-    role: user.role,
+    sub: cred.id,
+    username: cred.username,
+    role: cred.role,
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + config.jwtExpiryHours * 3600,
   };
@@ -124,7 +125,7 @@ export async function refresh(refreshToken: string) {
   const expiresAt = new Date(Date.now() + config.refreshTokenExpiryDays * 24 * 3600 * 1000);
 
   await db.insert(schema.refreshTokens).values({
-    user_id: user.id,
+    user_id: cred.id,
     token: newRefreshToken,
     expires_at: expiresAt,
   });
@@ -133,42 +134,33 @@ export async function refresh(refreshToken: string) {
 }
 
 export async function changePassword(userId: string, currentPassword: string, newPassword: string) {
-  const user = await db.query.users.findFirst({
-    where: (users, { eq }) => eq(users.id, userId),
+  const cred = await db.query.credentials.findFirst({
+    where: (creds, { eq }) => eq(creds.id, userId),
   });
-  if (!user) {
+  if (!cred) {
     throw new NotFoundError('User not found');
   }
 
-  const valid = await bcrypt.compare(currentPassword, user.password_hash);
+  const valid = await bcrypt.compare(currentPassword, cred.password_hash);
   if (!valid) {
     throw new UnauthorizedError('Current password is incorrect');
   }
 
   const password_hash = await bcrypt.hash(newPassword, 12);
   await db
-    .update(schema.users)
+    .update(schema.credentials)
     .set({ password_hash, updated_at: new Date() })
-    .where(eq(schema.users.id, userId));
+    .where(eq(schema.credentials.id, userId));
 
   // Invalidate all refresh tokens to force re-login on other sessions
   await db.delete(schema.refreshTokens).where(eq(schema.refreshTokens.user_id, userId));
 }
 
 /**
- * Determine the role assigned to a newly registered user.
- * Always returns 'user' — admin privileges are never granted via registration.
- * Admin accounts are bootstrapped at startup via ADMIN_EMAIL / ADMIN_PASSWORD env vars.
- */
-export function assignRegistrationRole(_email: string): string {
-  return 'user';
-}
-
-/**
- * Seed an admin user from environment variables at startup.
+ * Seed an admin credential from environment variables at startup.
  * If ADMIN_EMAIL and ADMIN_PASSWORD are set:
- *   - Creates the admin user if no user with that email exists
- *   - Promotes the existing user to admin if they already registered with 'user' role
+ *   - Creates the admin credential if no credential with that email exists
+ *   - Promotes the existing credential to admin if they already registered with 'user' role
  * If the env vars are not set, this is a no-op.
  */
 export async function bootstrapAdmin() {
@@ -178,27 +170,38 @@ export async function bootstrapAdmin() {
 
   const adminUsername = config.adminUsername;
 
-  const existing = await db.query.users.findFirst({
-    where: (users, { eq }) => eq(users.email, adminEmail),
+  const existing = await db.query.credentials.findFirst({
+    where: (creds, { eq }) => eq(creds.email, adminEmail),
   });
 
   if (existing) {
     if (existing.role !== 'admin') {
       await db
-        .update(schema.users)
+        .update(schema.credentials)
         .set({ role: 'admin', updated_at: new Date() })
-        .where(eq(schema.users.id, existing.id));
-      console.log(`Promoted existing user ${adminEmail} to admin`);
+        .where(eq(schema.credentials.id, existing.id));
+      console.log(`Promoted existing credential ${adminEmail} to admin`);
     }
     return;
   }
 
   const password_hash = await bcrypt.hash(adminPassword, 12);
-  await db.insert(schema.users).values({
+  const [cred] = await db.insert(schema.credentials).values({
     username: adminUsername,
     email: adminEmail,
     password_hash,
     role: 'admin',
+  }).returning();
+
+  // Publish user.created so user-service creates the admin profile
+  const js = getJetStream();
+  const event = createEnvelope<UserCreated>({
+    user_id: cred.id,
+    username: cred.username,
+    email: cred.email,
+    role: cred.role,
   });
-  console.log(`Created admin user: ${adminEmail}`);
+  await js.publish(USER_CREATED, sc.encode(JSON.stringify(event)));
+
+  console.log(`Created admin credential: ${adminEmail}`);
 }

@@ -1,0 +1,45 @@
+import { connect, NatsConnection, JetStreamClient, JetStreamManager, nkeyAuthenticator } from 'nats';
+import { STREAM_NAME, STREAM_SUBJECTS } from '@blog/shared';
+import { config } from '../config.js';
+
+let nc: NatsConnection;
+let js: JetStreamClient;
+
+export async function connectNats(): Promise<void> {
+  nc = await connect({
+    servers: config.natsUrl,
+    authenticator: config.natsNkeySeed
+      ? nkeyAuthenticator(new TextEncoder().encode(config.natsNkeySeed))
+      : undefined,
+  });
+  console.log(`Connected to NATS at ${config.natsUrl}`);
+
+  const jsm: JetStreamManager = await nc.jetstreamManager();
+
+  // Ensure the BLOG_EVENTS stream exists
+  try {
+    await jsm.streams.info(STREAM_NAME);
+  } catch {
+    await jsm.streams.add({
+      name: STREAM_NAME,
+      subjects: [STREAM_SUBJECTS],
+    });
+    console.log(`Created JetStream stream: ${STREAM_NAME}`);
+  }
+
+  js = nc.jetstream();
+}
+
+export function getJetStream(): JetStreamClient {
+  return js;
+}
+
+export function getNatsConnection(): NatsConnection {
+  return nc;
+}
+
+export async function disconnectNats(): Promise<void> {
+  if (nc) {
+    await nc.drain();
+  }
+}

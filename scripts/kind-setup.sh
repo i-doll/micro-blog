@@ -17,6 +17,7 @@ echo "==> Building Docker images..."
 docker build --network=host -t blog/gateway:dev -f "$PROJECT_DIR/crates/gateway/Dockerfile" "$PROJECT_DIR"
 docker build --network=host -t blog/search:dev -f "$PROJECT_DIR/crates/search/Dockerfile" "$PROJECT_DIR"
 docker build --network=host -t blog/media:dev -f "$PROJECT_DIR/crates/media/Dockerfile" "$PROJECT_DIR"
+docker build --network=host -t blog/auth:dev -f "$PROJECT_DIR/services/auth/Dockerfile" "$PROJECT_DIR"
 docker build --network=host -t blog/user:dev -f "$PROJECT_DIR/services/user/Dockerfile" "$PROJECT_DIR"
 docker build --network=host -t blog/post:dev -f "$PROJECT_DIR/services/post/Dockerfile" "$PROJECT_DIR"
 docker build --network=host -t blog/comment:dev -f "$PROJECT_DIR/services/comment/Dockerfile" "$PROJECT_DIR"
@@ -28,6 +29,7 @@ echo "==> Loading images into Kind..."
 kind load docker-image blog/gateway:dev --name "$CLUSTER_NAME"
 kind load docker-image blog/search:dev --name "$CLUSTER_NAME"
 kind load docker-image blog/media:dev --name "$CLUSTER_NAME"
+kind load docker-image blog/auth:dev --name "$CLUSTER_NAME"
 kind load docker-image blog/user:dev --name "$CLUSTER_NAME"
 kind load docker-image blog/post:dev --name "$CLUSTER_NAME"
 kind load docker-image blog/comment:dev --name "$CLUSTER_NAME"
@@ -57,7 +59,7 @@ echo "==> Configuring Vault database engine (waiting for postgres)..."
 "$SCRIPT_DIR/configure-vault.sh" database
 
 echo "==> Waiting for deployments to roll out..."
-for deploy in gateway user-service post-service comment-service notification-service \
+for deploy in gateway auth-service user-service post-service comment-service notification-service \
                search-indexer search-query media-service captcha-service frontend nats; do
   kubectl rollout status deployment/"$deploy" -n blog --timeout=180s 2>/dev/null || true
 done

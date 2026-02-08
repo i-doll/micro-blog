@@ -5,6 +5,7 @@ use crate::routes::proxy::AppState;
 
 pub async fn aggregated_health(State(state): State<AppState>) -> (StatusCode, Json<Value>) {
     let services = [
+        ("auth-service", &state.config.auth_service_url),
         ("user-service", &state.config.user_service_url),
         ("post-service", &state.config.post_service_url),
         ("comment-service", &state.config.comment_service_url),

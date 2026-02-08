@@ -2,7 +2,7 @@
 
 ## Architecture
 
-Monorepo with 8 microservices: 3 Rust (Axum) + 5 TypeScript (Fastify).
+Monorepo with 9 microservices: 3 Rust (Axum) + 6 TypeScript (Fastify).
 Services communicate async via NATS JetStream (`blog.<entity>.<action>`).
 Each service owns its own PostgreSQL database (database-per-service).
 
@@ -11,6 +11,7 @@ Each service owns its own PostgreSQL database (database-per-service).
 | Service      | Lang | Port | DB                 |
 |-------------|------|------|--------------------|
 | gateway     | Rust | 3000 | none               |
+| auth        | TS   | 3009 | blog_auth          |
 | user        | TS   | 3001 | blog_users         |
 | post        | TS   | 3002 | blog_posts         |
 | comment     | TS   | 3003 | blog_comments      |
@@ -38,6 +39,7 @@ cargo run -p blog-media              # Run media
 ### TypeScript services
 ```bash
 npm install                          # Install all deps
+npm run dev:auth                     # Run auth service
 npm run dev:user                     # Run user service
 npm run dev:post                     # Run post service
 npm run dev:comment                  # Run comment service
@@ -57,10 +59,10 @@ kubectl apply -k k8s/overlays/dev    # Apply K8s manifests
 
 - **Event subjects:** `blog.<entity>.<action>` on stream `BLOG_EVENTS`
 - **NATS consumers:** Durable, named after the service (e.g., `search-service`)
-- **JWT:** HS256, signed by user-service, validated at gateway
+- **JWT:** HS256, signed by auth-service, validated at gateway
 - **Gateway headers:** `X-User-Id`, `X-User-Role`, `X-Username` injected after JWT validation
 - **Health endpoints:** Every service exposes `GET /health`
-- **API routes:** All external routes go through gateway at `/api/<service>/...`
+- **API routes:** All external routes go through gateway at `/api/<service>/...`. Auth routes (`/api/auth/*`) go to auth-service; user routes (`/api/users/*`) go to user-service. Password change is `PUT /api/auth/password`.
 - **Slugs:** Generated from post titles, must be unique
 - **Pagination:** `?page=1&limit=20` query params, default page=1, limit=20
 
@@ -69,7 +71,8 @@ kubectl apply -k k8s/overlays/dev    # Apply K8s manifests
 All services read from environment:
 - `DATABASE_URL` — PostgreSQL connection string (not for gateway/search)
 - `NATS_URL` — NATS server URL (default: `nats://localhost:4222`)
-- `JWT_SECRET` — Shared secret for HS256 JWT
+- `JWT_SECRET` — Shared secret for HS256 JWT (auth-service + gateway)
+- `AUTH_SERVICE_URL` — Auth service URL (gateway only, default: `http://localhost:3009`)
 - `PORT` — Service listen port
 - `LOG_LEVEL` — Tracing log level (default: `info`)
 - `RUST_LOG` — Rust tracing filter

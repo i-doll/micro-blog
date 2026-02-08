@@ -47,6 +47,24 @@ spec:
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
+  name: allow-gateway-to-auth
+  namespace: blog
+spec:
+  selector:
+    matchLabels:
+      app: auth-service
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/blog/sa/gateway"]
+      to:
+        - operation:
+            ports: ["3009"]
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
   name: allow-gateway-to-user
   namespace: blog
 spec:
@@ -185,6 +203,7 @@ spec:
     - from:
         - source:
             principals:
+              - "cluster.local/ns/blog/sa/auth-service"
               - "cluster.local/ns/blog/sa/user-service"
               - "cluster.local/ns/blog/sa/post-service"
               - "cluster.local/ns/blog/sa/comment-service"
@@ -211,6 +230,7 @@ spec:
     - from:
         - source:
             principals:
+              - "cluster.local/ns/blog/sa/auth-service"
               - "cluster.local/ns/blog/sa/user-service"
               - "cluster.local/ns/blog/sa/post-service"
               - "cluster.local/ns/blog/sa/comment-service"

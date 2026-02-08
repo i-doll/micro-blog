@@ -80,6 +80,7 @@ data:
     # Grant CREATEROLE so Vault can create dynamic database roles
     psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
       ALTER USER postgres CREATEROLE;
+      CREATE DATABASE blog_auth;
       CREATE DATABASE blog_users;
       CREATE DATABASE blog_posts;
       CREATE DATABASE blog_comments;
@@ -88,7 +89,7 @@ data:
     EOSQL
 
     # Grant public schema access in each database so Vault-created roles can use them
-    for db in blog_users blog_posts blog_comments blog_notifications blog_media; do
+    for db in blog_auth blog_users blog_posts blog_comments blog_notifications blog_media; do
       psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$db" <<-EOSQL
         GRANT ALL ON SCHEMA public TO PUBLIC;
       EOSQL

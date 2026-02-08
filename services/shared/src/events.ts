@@ -9,12 +9,15 @@ export interface UserCreated {
   user_id: string;
   username: string;
   email: string;
+  role: string;
 }
 
 export interface UserUpdated {
   user_id: string;
   username?: string;
+  email?: string;
   bio?: string;
+  role?: string;
 }
 
 export interface UserDeleted {

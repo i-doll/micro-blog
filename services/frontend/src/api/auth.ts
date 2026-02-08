@@ -31,3 +31,15 @@ export function verifyCaptcha(id: string, answer: string): Promise<CaptchaVerify
     body: JSON.stringify({ id, answer }),
   });
 }
+
+export function changePassword(
+  currentPassword: string,
+  newPassword: string,
+  token: string,
+): Promise<void> {
+  return apiFetch('/api/auth/password', {
+    method: 'PUT',
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    token,
+  });
+}
