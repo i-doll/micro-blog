@@ -19,6 +19,7 @@ export const refreshSchema = z.object({
 // User schemas
 export const updateUserSchema = z.object({
   username: z.string().min(3).max(50).optional(),
+  email: z.string().email().optional(),
   bio: z.string().max(500).optional(),
 });
 

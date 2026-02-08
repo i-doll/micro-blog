@@ -53,7 +53,7 @@ export function useUpdateUserMutation() {
   const { token } = useAuth();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<{ username: string; bio: string }> }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<{ username: string; email: string; bio: string }> }) =>
       usersApi.updateUser(id, data, token!),
     onSuccess: (_result, { id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.detail(id) });

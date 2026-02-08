@@ -70,7 +70,7 @@ export async function getUserById(id: string) {
   return user;
 }
 
-export async function updateUser(id: string, data: { username?: string; bio?: string }) {
+export async function updateUser(id: string, data: { username?: string; email?: string; bio?: string }) {
   const existing = await db.query.users.findFirst({
     where: (users, { eq }) => eq(users.id, id),
   });

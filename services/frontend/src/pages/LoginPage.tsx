@@ -81,7 +81,9 @@ export function LoginPage() {
         <FormGroup label="Email">
           <input
             {...stylex.props(styles.input)}
-            type="email"
+            type="text"
+            inputMode="email"
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required

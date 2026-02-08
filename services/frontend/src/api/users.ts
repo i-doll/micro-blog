@@ -17,7 +17,7 @@ export function getUsers(
 
 export function updateUser(
   id: string,
-  data: Partial<{ username: string; bio: string }>,
+  data: Partial<{ username: string; email: string; bio: string }>,
   token: string,
 ): Promise<User> {
   return apiFetch<User>(`/api/users/${id}`, {

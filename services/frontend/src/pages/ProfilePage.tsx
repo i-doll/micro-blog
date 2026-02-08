@@ -140,6 +140,7 @@ export function ProfilePage() {
   const { toast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
   const [editUsername, setEditUsername] = useState('');
+  const [editEmail, setEditEmail] = useState('');
   const [editBio, setEditBio] = useState('');
 
   const { data: profile, isLoading: profileLoading } = useUserQuery(user?.id);
@@ -160,6 +161,7 @@ export function ProfilePage() {
   const openEdit = () => {
     if (!profile) return;
     setEditUsername(profile.username || '');
+    setEditEmail(profile.email || '');
     setEditBio(profile.bio || '');
     setModalOpen(true);
   };
@@ -168,9 +170,9 @@ export function ProfilePage() {
     try {
       await updateUserMutation.mutateAsync({
         id: user!.id,
-        data: { username: editUsername.trim(), bio: editBio.trim() },
+        data: { username: editUsername.trim(), email: editEmail.trim(), bio: editBio.trim() },
       });
-      updateUser({ ...user!, username: editUsername.trim(), bio: editBio.trim() });
+      updateUser({ ...user!, username: editUsername.trim(), email: editEmail.trim(), bio: editBio.trim() });
       setModalOpen(false);
       toast('Profile updated', 'success');
     } catch (err: any) {
@@ -276,6 +278,15 @@ export function ProfilePage() {
             type="text"
             value={editUsername}
             onChange={(e) => setEditUsername(e.target.value)}
+          />
+        </FormGroup>
+        <FormGroup label="Email">
+          <input
+            {...stylex.props(styles.input)}
+            type="text"
+            inputMode="email"
+            value={editEmail}
+            onChange={(e) => setEditEmail(e.target.value)}
           />
         </FormGroup>
         <FormGroup label="Bio">
